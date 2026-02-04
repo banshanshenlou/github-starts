@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_extensionName__",
+  "version": "0.1.0",
+  "description": "__MSG_extensionDescription__",
+  "default_locale": "zh_CN",
+  "permissions": ["storage", "alarms"],
+  "host_permissions": ["https://github.com/*", "https://api.github.com/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": ["https://github.com/*"],
+      "js": [
+        "shared/constants.js",
+        "shared/i18n.js",
+        "shared/messaging.js",
+        "content/context.js",
+        "content/utils.js",
+        "content/storage.js",
+        "content/api.js",
+        "content/groups.js",
+        "content/repo.js",
+        "content/page.js",
+        "content/ui.js",
+        "content/app.js",
+        "content.js"
+      ],
+      "css": ["content.css"]
+    }
+  ]
+}

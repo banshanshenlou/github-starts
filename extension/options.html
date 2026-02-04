@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="optionsTitle">Stars Manager 设置</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1 data-i18n="optionsTitle">Stars Manager 设置</h1>
+      <p data-i18n-html="optionsIntro">使用经典 PAT，并勾选 <strong>gist</strong> 与 <strong>read:user</strong> 权限；如需同步私有星标仓库，请额外勾选 <strong>repo</strong>。</p>
+      <div class="field">
+        <label for="pat" data-i18n="fieldPat">PAT</label>
+        <input id="pat" type="password" placeholder="ghp_***" data-i18n-placeholder="placeholderPat" />
+      </div>
+      <div class="field">
+        <label for="gistId" data-i18n="fieldGistId">Gist ID</label>
+        <input id="gistId" type="text" placeholder="请输入 Gist ID" data-i18n-placeholder="placeholderGistId" />
+      </div>
+      <div class="field">
+        <label for="gistFile" data-i18n="fieldGistFile">Gist 文件名</label>
+        <input id="gistFile" type="text" placeholder="stars-metadata.json" data-i18n-placeholder="placeholderGistFile" />
+      </div>
+      <div class="actions">
+        <button id="save" type="button" data-i18n="btnSave">保存</button>
+        <button id="test" type="button" data-i18n="btnTestToken">测试 Token</button>
+        <button id="create" type="button" data-i18n="btnCreateGist">创建 Gist</button>
+      </div>
+      <div id="status" class="status" role="status"></div>
+    </div>
+    <script src="shared/constants.js"></script>
+    <script src="shared/i18n.js"></script>
+    <script src="shared/messaging.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>
