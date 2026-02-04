@@ -32,9 +32,7 @@ Compress-Archive -Path extension\* -DestinationPath dist\github-stars-manager-v0
 ```
 
 ## Star 历史
-```
-https://api.star-history.com/svg?repos=banshanshenlou/github-starts&type=Date
-```
+![Star 历史](https://api.star-history.com/svg?repos=banshanshenlou/github-starts&type=Date)
 
 ## 许可证
 见 `LICENSE`。
