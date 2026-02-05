@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light" data-lang="zh">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="GitHub Stars Manager：在 GitHub 页面内管理星标仓库，支持分组、标签、备注与 Gist 同步。"
+    />
+    <title>GitHub Stars Manager</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="site-header">
+        <a class="brand" href="https://github.com/banshanshenlou/github-starts" target="_blank" rel="noreferrer">
+          <span class="brand-mark" aria-hidden="true">✶</span>
+          <span class="brand-text">GitHub Stars Manager</span>
+        </a>
+        <nav class="site-nav">
+          <a href="#highlights" data-i18n="nav.highlights">功能亮点</a>
+          <a href="#efficiency" data-i18n="nav.efficiency">效率体验</a>
+          <a href="#wechat" data-i18n="nav.wechat">公众号</a>
+          <a href="#install" data-i18n="nav.install">如何安装</a>
+          <a href="#sync" data-i18n="nav.sync">同步与隐私</a>
+          <a href="#screens" data-i18n="nav.screens">截图</a>
+          <a href="#faq" data-i18n="nav.faq">常见问题</a>
+          <a href="#download" data-i18n="nav.download">下载</a>
+        </nav>
+        <div class="controls">
+          <div class="toggle" role="group" aria-label="语言切换">
+            <button type="button" data-lang-option="zh">中文</button>
+            <button type="button" data-lang-option="en">EN</button>
+          </div>
+          <div class="toggle" role="group" aria-label="主题切换">
+            <button type="button" data-theme-option="light" data-i18n="theme.light">浅色</button>
+            <button type="button" data-theme-option="dark" data-i18n="theme.dark">深色</button>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div class="hero-content">
+            <p class="eyebrow" data-i18n="hero.eyebrow">浏览器扩展</p>
+            <h1 data-i18n="hero.title">星标不再乱，收藏更有序</h1>
+            <p class="hero-subtitle" data-i18n="hero.subtitle">
+              在 GitHub 页面内直接管理星标：分组、标签、备注，并支持 Gist 多设备同步。
+            </p>
+            <div class="cta">
+              <a
+                class="btn primary"
+                href="https://github.com/banshanshenlou/github-starts/releases/download/v0.1.0/github-stars-manager-v0.1.0.crx"
+                target="_blank"
+                rel="noreferrer"
+                data-i18n="hero.ctaPrimary"
+                >下载 CRX</a
+              >
+              <a
+                class="btn ghost"
+                href="https://github.com/banshanshenlou/github-starts"
+                target="_blank"
+                rel="noreferrer"
+                data-i18n="hero.ctaSecondary"
+                >查看 GitHub</a
+              >
+            </div>
+            <p class="hero-meta" data-i18n="hero.helper">
+              开源 · 无需离开 GitHub · 中英文与暗色模式
+            </p>
+            <ul class="pill-list" data-i18n-list="hero.pills"></ul>
+          </div>
+          <div class="hero-visual">
+            <div class="hero-glow" aria-hidden="true"></div>
+            <div class="constellation" aria-hidden="true">
+              <span class="star star-1"></span>
+              <span class="star star-2"></span>
+              <span class="star star-3"></span>
+              <span class="star star-4"></span>
+              <span class="star star-5"></span>
+              <span class="star star-6"></span>
+            </div>
+            <svg class="fairy" viewBox="0 0 220 220" role="img" aria-label="轻盈的星光精灵插画">
+              <defs>
+                <linearGradient id="fairyGlow" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#7DD3FC" stop-opacity="0.9" />
+                  <stop offset="100%" stop-color="#34D399" stop-opacity="0.9" />
+                </linearGradient>
+              </defs>
+              <circle cx="110" cy="48" r="18" fill="url(#fairyGlow)" />
+              <path
+                d="M110 68c-20 12-34 30-36 56 18-8 36-8 54 0-2-26-16-44-18-56z"
+                fill="url(#fairyGlow)"
+                opacity="0.85"
+              />
+              <path
+                d="M82 92c-26 6-46 22-56 46 28-6 50-4 66 6-4-22-2-38-10-52z"
+                fill="#93C5FD"
+                opacity="0.55"
+              />
+              <path
+                d="M138 92c26 6 46 22 56 46-28-6-50-4-66 6 4-22 2-38 10-52z"
+                fill="#6EE7B7"
+                opacity="0.55"
+              />
+              <circle cx="78" cy="164" r="6" fill="#FCD34D" />
+              <circle cx="142" cy="164" r="6" fill="#FCD34D" />
+              <path d="M110 124l6 22-6 28-6-28z" fill="#0F172A" opacity="0.65" />
+            </svg>
+            <div class="hero-card">
+              <p class="hero-card-title" data-i18n="hero.cardTitle">你的星标库</p>
+              <div class="hero-card-tags">
+                <span data-i18n="hero.cardTag1">前端</span>
+                <span data-i18n="hero.cardTag2">灵感</span>
+                <span data-i18n="hero.cardTag3">工具</span>
+              </div>
+              <p class="hero-card-desc" data-i18n="hero.cardDesc">一眼找到要用的仓库</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="highlights" class="section" data-reveal>
+          <div class="section-head">
+            <p class="eyebrow" data-i18n="highlights.eyebrow">功能亮点</p>
+            <h2 data-i18n="highlights.title">把星标变成可管理的收藏夹</h2>
+            <p data-i18n="highlights.subtitle">
+              轻量但完整的整理体系，让收藏像项目一样可维护。
+            </p>
+          </div>
+          <div class="feature-grid">
+            <article class="feature-card reveal-item" style="--delay: 0s;">
+              <h3 data-i18n="featureGroups.manage.title">管理方式</h3>
+              <ul data-i18n-list="featureGroups.manage.items"></ul>
+            </article>
+            <article class="feature-card reveal-item" style="--delay: 0.08s;">
+              <h3 data-i18n="featureGroups.efficiency.title">效率体验</h3>
+              <ul data-i18n-list="featureGroups.efficiency.items"></ul>
+            </article>
+            <article class="feature-card reveal-item" style="--delay: 0.16s;">
+              <h3 data-i18n="featureGroups.sync.title">同步与安全</h3>
+              <ul data-i18n-list="featureGroups.sync.items"></ul>
+            </article>
+          </div>
+        </section>
+
+        <section id="efficiency" class="section" data-reveal>
+          <div class="section-head">
+            <p class="eyebrow" data-i18n="efficiency.eyebrow">效率体验</p>
+            <h2 data-i18n="efficiency.title">更快、更顺、更少跳转</h2>
+            <p data-i18n="efficiency.subtitle">把时间留给阅读与评估，而不是翻找。</p>
+          </div>
+          <div class="focus-grid">
+            <article class="focus-card reveal-item" style="--delay: 0s;">
+              <h3 data-i18n="efficiency.cards.0.title">搜索更精准</h3>
+              <p data-i18n="efficiency.cards.0.desc">标签与备注让检索更有语义。</p>
+            </article>
+            <article class="focus-card reveal-item" style="--delay: 0.06s;">
+              <h3 data-i18n="efficiency.cards.1.title">分组树定位</h3>
+              <p data-i18n="efficiency.cards.1.desc">层级结构快速聚焦目标。</p>
+            </article>
+            <article class="focus-card reveal-item" style="--delay: 0.12s;">
+              <h3 data-i18n="efficiency.cards.2.title">内联编辑</h3>
+              <p data-i18n="efficiency.cards.2.desc">Stars 与仓库页即改即存。</p>
+            </article>
+            <article class="focus-card reveal-item" style="--delay: 0.18s;">
+              <h3 data-i18n="efficiency.cards.3.title">筛选更高效</h3>
+              <p data-i18n="efficiency.cards.3.desc">组合标签快速收敛范围。</p>
+            </article>
+            <article class="focus-card reveal-item" style="--delay: 0.24s;">
+              <h3 data-i18n="efficiency.cards.4.title">无需跳转</h3>
+              <p data-i18n="efficiency.cards.4.desc">整理与浏览在 GitHub 内完成。</p>
+            </article>
+            <article class="focus-card reveal-item" style="--delay: 0.3s;">
+              <h3 data-i18n="efficiency.cards.5.title">排序更清晰</h3>
+              <p data-i18n="efficiency.cards.5.desc">按需求排列，优先级一眼可见。</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="wechat" class="section wechat-section" data-reveal>
+          <div class="wechat-card">
+            <div class="wechat-content">
+              <p class="eyebrow" data-i18n="wechat.eyebrow">公众号推荐</p>
+              <h2 data-i18n="wechat.title">关注微信公众号：成为超级个体</h2>
+              <p data-i18n="wechat.subtitle">获取更新、使用技巧与收藏方法。</p>
+              <div class="wechat-actions">
+                <span class="wechat-name" data-i18n="wechat.name">成为超级个体</span>
+                <span class="wechat-tip" data-i18n="wechat.tip">扫码关注</span>
+              </div>
+            </div>
+            <div class="wechat-qr">
+              <img
+                class="wechat-qr-img"
+                src="4.jpg"
+                alt="微信公众号二维码"
+                loading="lazy"
+                data-i18n-attr="alt:wechat.qrAlt"
+              />
+              <span class="wechat-qr-caption" data-i18n="wechat.qrHint">扫码关注</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="workflow" class="section" data-reveal>
+          <div class="section-head">
+            <p class="eyebrow" data-i18n="workflow.eyebrow">使用流程</p>
+            <h2 data-i18n="workflow.title">三步把星标整理起来</h2>
+            <p data-i18n="workflow.subtitle">从安装到同步只需要几分钟。</p>
+          </div>
+          <ol class="steps" data-i18n-list="workflow.steps"></ol>
+        </section>
+
+        <section id="sync" class="section accent" data-reveal>
+          <div class="section-head">
+            <p class="eyebrow" data-i18n="sync.eyebrow">同步与隐私</p>
+            <h2 data-i18n="sync.title">你掌控数据流转</h2>
+            <p data-i18n="sync.subtitle">本地与 Gist 之间双向同步，可随时选择保留版本。</p>
+          </div>
+          <div class="sync-grid">
+            <div class="sync-card reveal-item" style="--delay: 0s;">
+              <h3 data-i18n="sync.points.0.title">只在本地与 Gist</h3>
+              <p data-i18n="sync.points.0.desc">数据不会上传到第三方服务器。</p>
+            </div>
+            <div class="sync-card reveal-item" style="--delay: 0.08s;">
+              <h3 data-i18n="sync.points.1.title">冲突提示</h3>
+              <p data-i18n="sync.points.1.desc">遇到分歧可选择保留哪一份。</p>
+            </div>
+            <div class="sync-card reveal-item" style="--delay: 0.16s;">
+              <h3 data-i18n="sync.points.2.title">自动语言识别</h3>
+              <p data-i18n="sync.points.2.desc">中英文界面根据系统自动切换。</p>
+            </div>
+            <div class="sync-card reveal-item" style="--delay: 0.24s;">
+              <h3 data-i18n="sync.points.3.title">手动/自动同步</h3>
+              <p data-i18n="sync.points.3.desc">按需触发或定时同步。</p>
+            </div>
+            <div class="sync-card reveal-item" style="--delay: 0.32s;">
+              <h3 data-i18n="sync.points.4.title">版本选择</h3>
+              <p data-i18n="sync.points.4.desc">明确选择保留版本，避免误覆盖。</p>
+            </div>
+            <div class="sync-card reveal-item" style="--delay: 0.4s;">
+              <h3 data-i18n="sync.points.5.title">可随时撤销</h3>
+              <p data-i18n="sync.points.5.desc">Token 可随时撤销，仍可本地管理。</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="screens" class="section" data-reveal>
+          <div class="section-head">
+            <p class="eyebrow" data-i18n="screens.eyebrow">截图</p>
+            <h2 data-i18n="screens.title">功能截图</h2>
+            <p data-i18n="screens.subtitle">三张截图展示核心使用场景。</p>
+          </div>
+          <div class="screens-grid">
+            <figure class="screen-card reveal-item" style="--delay: 0s;">
+              <div class="screen-media">
+                <img
+                  src="1.png"
+                  alt="侧边抽屉截图"
+                  loading="lazy"
+                  data-i18n-attr="alt:screens.cards.0.alt"
+                />
+                <span class="screen-badge" data-i18n="screens.cards.0.label">侧边抽屉</span>
+              </div>
+              <figcaption>
+                <h3 data-i18n="screens.cards.0.title">分组树与星标列表</h3>
+                <p data-i18n="screens.cards.0.desc">集中管理与快速筛选。</p>
+              </figcaption>
+            </figure>
+            <figure class="screen-card reveal-item" style="--delay: 0.08s;">
+              <div class="screen-media">
+                <img
+                  src="2.png"
+                  alt="Stars 列表截图"
+                  loading="lazy"
+                  data-i18n-attr="alt:screens.cards.1.alt"
+                />
+                <span class="screen-badge" data-i18n="screens.cards.1.label">Stars 列表</span>
+              </div>
+              <figcaption>
+                <h3 data-i18n="screens.cards.1.title">Stars 列表内联编辑</h3>
+                <p data-i18n="screens.cards.1.desc">不离开列表，随时标注。</p>
+              </figcaption>
+            </figure>
+            <figure class="screen-card reveal-item" style="--delay: 0.16s;">
+              <div class="screen-media">
+                <img
+                  src="3.png"
+                  alt="仓库页截图"
+                  loading="lazy"
+                  data-i18n-attr="alt:screens.cards.2.alt"
+                />
+                <span class="screen-badge" data-i18n="screens.cards.2.label">仓库页</span>
+              </div>
+              <figcaption>
+                <h3 data-i18n="screens.cards.2.title">仓库页内联编辑</h3>
+                <p data-i18n="screens.cards.2.desc">给每个仓库留下上下文。</p>
+              </figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section id="install" class="section" data-reveal>
+          <div class="section-head">
+            <p class="eyebrow" data-i18n="install.eyebrow">如何安装</p>
+            <h2 data-i18n="install.title">开发者模式安装</h2>
+            <p data-i18n="install.subtitle">确保浏览器允许侧载扩展。</p>
+          </div>
+          <div class="install-grid">
+            <ol class="install-steps" data-i18n-list="install.steps"></ol>
+            <div class="install-panel">
+              <p data-i18n="install.tip">打开扩展管理页</p>
+              <code>chrome://extensions</code>
+              <p class="install-note" data-i18n="install.note">
+                如果 CRX 无法直接安装，请先启用开发者模式。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="faq" class="section" data-reveal>
+          <div class="section-head">
+            <p class="eyebrow" data-i18n="faq.eyebrow">常见问题</p>
+            <h2 data-i18n="faq.title">安装与更新说明</h2>
+            <p data-i18n="faq.subtitle">先看这里，避免踩坑。</p>
+          </div>
+          <div class="faq-list" data-i18n-faq="faq.items"></div>
+        </section>
+
+        <section id="download" class="section cta-section" data-reveal>
+          <div class="cta-card">
+            <div>
+              <h2 data-i18n="download.title">开始整理你的星标</h2>
+              <p data-i18n="download.subtitle">下载 CRX，几分钟完成安装。</p>
+            </div>
+            <div class="cta">
+              <a
+                class="btn primary"
+                href="https://github.com/banshanshenlou/github-starts/releases/download/v0.1.0/github-stars-manager-v0.1.0.crx"
+                target="_blank"
+                rel="noreferrer"
+                data-i18n="download.ctaPrimary"
+                >下载 CRX</a
+              >
+              <a
+                class="btn ghost"
+                href="https://github.com/banshanshenlou/github-starts"
+                target="_blank"
+                rel="noreferrer"
+                data-i18n="download.ctaSecondary"
+                >查看 GitHub</a
+              >
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="footer-left">
+          <div class="brand-mini">
+            <span class="brand-mark" aria-hidden="true">✶</span>
+            <span class="brand-text">GitHub Stars Manager</span>
+          </div>
+          <p data-i18n="footer.tagline">开源星标管理工具</p>
+        </div>
+        <div class="footer-links">
+          <a
+            href="https://github.com/banshanshenlou/github-starts"
+            target="_blank"
+            rel="noreferrer"
+            data-i18n="footer.github"
+            >GitHub</a
+          >
+          <a
+            href="https://github.com/banshanshenlou/github-starts/blob/main/LICENSE"
+            target="_blank"
+            rel="noreferrer"
+            data-i18n="footer.license"
+            >许可证</a
+          >
+          <a
+            href="https://github.com/banshanshenlou/github-starts/issues"
+            target="_blank"
+            rel="noreferrer"
+            data-i18n="footer.feedback"
+            >反馈</a
+          >
+        </div>
+      </footer>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>
