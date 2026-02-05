@@ -34,5 +34,12 @@ Compress-Archive -Path extension\* -DestinationPath dist\github-stars-manager-v0
 ## Star 历史
 ![Star 历史](https://api.star-history.com/svg?repos=banshanshenlou/github-starts&type=Date)
 
+## 赞助
+如果你觉得这个项目有帮助，欢迎支持。
+
+| 支付宝 | 微信支付 |
+| --- | --- |
+| ![支付宝二维码](docs/alipay.jpg) | ![微信支付二维码](docs/wepay.png) |
+
 ## 许可证
 见 `LICENSE`。

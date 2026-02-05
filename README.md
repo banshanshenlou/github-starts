@@ -34,5 +34,12 @@ Compress-Archive -Path extension\* -DestinationPath dist\github-stars-manager-v0
 ## Star History
 ![Star History](https://api.star-history.com/svg?repos=banshanshenlou/github-starts&type=Date)
 
+## Sponsor
+If you find this project useful, feel free to support it.
+
+| Alipay | WeChat Pay |
+| --- | --- |
+| ![Alipay QR](docs/alipay.jpg) | ![WeChat Pay QR](docs/wepay.png) |
+
 ## License
 See `LICENSE`.
