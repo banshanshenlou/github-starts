@@ -184,7 +184,7 @@ const copy = {
         },
         {
           q: "会读取我的私有仓库吗？",
-          a: "仅在你浏览相关页面时读取必要信息。"
+          a: "只在你打开 Stars 列表或仓库页时读取页面已展示的信息，不会在后台扫描私有仓库或拉取代码内容。"
         },
         {
           q: "如何更新？",
@@ -390,7 +390,7 @@ const copy = {
         },
         {
           q: "Does it read private repos?",
-          a: "Only the information needed on the pages you visit."
+          a: "Only reads what’s already displayed on Stars or repo pages you open, never scans private repos in the background."
         },
         {
           q: "How do I update?",
