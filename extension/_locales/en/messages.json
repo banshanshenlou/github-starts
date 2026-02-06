@@ -2,6 +2,7 @@
   "extensionName": { "message": "GitHub Stars Manager" },
   "extensionDescription": { "message": "Manage GitHub stars with groups, tags, and notes synced via Gist." },
   "appName": { "message": "Stars Manager" },
+  "manageButtonLabel": { "message": "github-starts" },
   "optionsTitle": { "message": "Stars Manager Settings" },
   "optionsIntro": { "message": "Use a classic PAT with <strong>gist</strong> and <strong>read:user</strong> scopes. Add <strong>repo</strong> if you need private stars." },
   "labelStarsColon": { "message": "Stars:" },

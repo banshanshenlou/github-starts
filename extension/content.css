@@ -99,6 +99,32 @@
   box-shadow: var(--shadow-sm);
 }
 
+.gh-stars-helper-manage-btn.attention {
+  animation: gh-stars-helper-manage-attention 0.7s ease-in-out 2;
+}
+
+.gh-stars-helper-manage-btn.attention:hover {
+  animation-play-state: paused;
+}
+
+@keyframes gh-stars-helper-manage-attention {
+  0% {
+    opacity: 1;
+    box-shadow: var(--shadow-sm);
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    box-shadow: 0 0 0 6px rgba(9, 105, 218, 0.18), var(--shadow-md);
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 1;
+    box-shadow: var(--shadow-sm);
+    transform: scale(1);
+  }
+}
+
 .gh-stars-helper-manage-btn:hover {
   background: var(--color-bg-tertiary);
   border-color: var(--color-border-emphasis);
@@ -1294,6 +1320,12 @@
   .gh-stars-helper-filters select,
   .gh-stars-helper-input {
     min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gh-stars-helper-manage-btn.attention {
+    animation: none;
   }
 }
 

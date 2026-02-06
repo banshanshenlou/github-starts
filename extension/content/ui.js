@@ -94,7 +94,7 @@
     button.id = "gh-stars-helper-manage-btn";
     button.className = "gh-stars-helper-manage-btn floating";
     button.type = "button";
-    button.textContent = t("appName", null, "Stars Manager");
+    button.textContent = t("manageButtonLabel", null, "github-starts");
     button.addEventListener("click", () => {
       if (runtime.suppressManageButtonClick) {
         return;
@@ -102,6 +102,17 @@
       toggleDrawer(true);
     });
     document.body.appendChild(button);
+    // 首次注入时闪烁两下，提示悬浮按钮入口。
+    window.requestAnimationFrame(() => {
+      button.classList.add("attention");
+      button.addEventListener(
+        "animationend",
+        () => {
+          button.classList.remove("attention");
+        },
+        { once: true }
+      );
+    });
     content.storage.setupManageButtonDrag(button);
     elements.manageButton = button;
     window.requestAnimationFrame(() => {

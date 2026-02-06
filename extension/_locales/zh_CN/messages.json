@@ -2,6 +2,7 @@
   "extensionName": { "message": "GitHub 星标管理" },
   "extensionDescription": { "message": "管理 GitHub 星标仓库，支持分组、标签与备注，并通过 Gist 同步。" },
   "appName": { "message": "Stars Manager" },
+  "manageButtonLabel": { "message": "github-starts" },
   "optionsTitle": { "message": "Stars Manager 设置" },
   "optionsIntro": { "message": "使用经典 PAT，并勾选 <strong>gist</strong> 与 <strong>read:user</strong> 权限；如需同步私有星标仓库，请额外勾选 <strong>repo</strong>。" },
   "labelStarsColon": { "message": "星标:" },
