@@ -28,7 +28,7 @@ Follow the in-app setup steps if you need guidance for PAT and Gist.
 - Build zip (PowerShell):
 
 ```powershell
-Compress-Archive -Path extension\* -DestinationPath dist\github-stars-manager-v0.1.1.zip -Force
+Compress-Archive -Path extension\* -DestinationPath dist\github-stars-manager-v0.1.2.zip -Force
 ```
 
 ## Star History

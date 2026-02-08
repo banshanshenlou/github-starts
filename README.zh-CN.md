@@ -28,7 +28,7 @@ PAT 与 Gist 的获取步骤可参考设置页内的初始化说明。
 - 生成压缩包（PowerShell）：
 
 ```powershell
-Compress-Archive -Path extension\* -DestinationPath dist\github-stars-manager-v0.1.1.zip -Force
+Compress-Archive -Path extension\* -DestinationPath dist\github-stars-manager-v0.1.2.zip -Force
 ```
 
 ## Star 历史
