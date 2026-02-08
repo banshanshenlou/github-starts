@@ -58,9 +58,9 @@
       content.page.stopObserver();
       stopPolling();
     }
+    content.repo.ensureRepoStarAutoOpen();
     if (isRepoPage()) {
       content.repo.ensureRepoEditButton();
-      content.repo.ensureRepoStarAutoOpen();
     }
   }
 

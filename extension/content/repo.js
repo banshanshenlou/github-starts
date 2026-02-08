@@ -8,7 +8,7 @@
   const t = typeof shared.t === "function"
     ? shared.t
     : (key, substitutions, fallback) => fallback || key;
-  const { getRepoFullNameFromPage, isRepoPage, parseRepoFullName } = content.utils;
+  const { getRepoFullNameFromPage, isRepoPage } = content.utils;
   const AUTO_SYNC_AFTER_SAVE_DELAY_MS = 5000;
 
   /**
@@ -373,16 +373,14 @@
    * 查找 Star 表单，优先匹配可见元素。
    */
   function findRepoStarForm(repoFullName) {
-    const forms = Array.from(
-      document.querySelectorAll('form[action$="/star"], form[action$="/unstar"]')
-    );
+    const forms = Array.from(document.querySelectorAll("form[action]"));
     const filtered = repoFullName
-      ? forms.filter((form) => parseRepoFullName(form.getAttribute("action")) === repoFullName)
+      ? forms.filter((form) => getRepoFullNameFromStarForm(form) === repoFullName)
       : forms;
     const visible = filtered.filter((form) => isElementVisible(form));
     const pickList = visible.length > 0 ? visible : filtered;
     return (
-      pickList.find((form) => (form.getAttribute("action") || "").endsWith("/unstar")) ||
+      pickList.find((form) => normalizeStarActionPath(form.getAttribute("action")).endsWith("/unstar")) ||
       pickList[0] ||
       null
     );
@@ -399,14 +397,177 @@
   }
 
   /**
+   * 归一化 Star 表单 action，统一处理绝对/相对路径。
+   */
+  function normalizeStarActionPath(action) {
+    if (!action || typeof action !== "string") {
+      return "";
+    }
+    if (action.startsWith("http")) {
+      try {
+        const url = new URL(action);
+        return url.pathname || "";
+      } catch {
+        return "";
+      }
+    }
+    return action.split(/[?#]/)[0] || "";
+  }
+
+  /**
+   * 解析严格仓库路径（仅接受 /owner/repo）。
+   */
+  function parseStrictRepoFullName(href) {
+    if (!href || typeof href !== "string") {
+      return "";
+    }
+    if (href.startsWith("http")) {
+      try {
+        const url = new URL(href);
+        href = url.pathname;
+      } catch {
+        return "";
+      }
+    }
+    const path = href.split(/[?#]/)[0] || "";
+    const match = path.match(/^\/([^/]+)\/([^/]+)\/?$/);
+    if (!match) {
+      return "";
+    }
+    const owner = match[1].toLowerCase();
+    if (owner === "topics" || owner === "search" || owner === "stars") {
+      return "";
+    }
+    return `${match[1]}/${match[2]}`;
+  }
+
+  /**
+   * 规范化按钮文本，兼容中英文状态判断。
+   */
+  function getButtonTextToken(button) {
+    if (!button) {
+      return "";
+    }
+    return String(button.textContent || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  /**
+   * 判断按钮是否为仓库 Star 按钮（排除话题 Star 与筛选按钮）。
+   */
+  function isRepositoryStarButton(button) {
+    if (!button) {
+      return false;
+    }
+    const label = String(button.getAttribute("aria-label") || "").toLowerCase();
+    if (label.includes("topic") || label.includes("this topic") || label.includes("主题")) {
+      return false;
+    }
+    if (label.includes("repository") && (label.includes("star") || label.includes("unstar"))) {
+      return true;
+    }
+    const text = getButtonTextToken(button);
+    return text === "star"
+      || text === "unstar"
+      || text === "starred"
+      || text === "星标"
+      || text === "已加星标"
+      || text === "取消星标";
+  }
+
+  /**
+   * 从 Star 按钮附近卡片提取仓库名，兜底 React 列表等无表单场景。
+   */
+  function getRepoFullNameFromButtonContext(starButton) {
+    if (!starButton) {
+      return "";
+    }
+    let current = starButton;
+    for (let depth = 0; depth < 10 && current && current !== document.body; depth += 1) {
+      const links = Array.from(current.querySelectorAll('a[href^="/"]'));
+      for (const link of links) {
+        const repoFullName = parseStrictRepoFullName(link.getAttribute("href"));
+        if (repoFullName) {
+          return repoFullName;
+        }
+      }
+      current = current.parentElement;
+    }
+    return "";
+  }
+
+  /**
+   * 为给定仓库定位 Star 控件，兼容 form/button 两种结构。
+   */
+  function findRepoStarControl(repoFullName) {
+    const form = findRepoStarForm(repoFullName);
+    const formButton = findRepoStarButton(form);
+    if (formButton) {
+      return { form, button: formButton };
+    }
+    if (!repoFullName) {
+      return { form: null, button: null };
+    }
+    const repoLinks = Array.from(
+      document.querySelectorAll(`a[href='/${repoFullName}'], a[href='/${repoFullName}/']`)
+    );
+    for (const link of repoLinks) {
+      let current = link;
+      for (let depth = 0; depth < 8 && current && current !== document.body; depth += 1) {
+        const candidate = Array.from(current.querySelectorAll("button")).find((button) =>
+          isRepositoryStarButton(button)
+        );
+        if (candidate) {
+          return { form: null, button: candidate };
+        }
+        current = current.parentElement;
+      }
+    }
+    return { form: null, button: null };
+  }
+
+  /**
+   * 判断当前 Star 表单是否属于“话题 Star”，避免误触发仓库编辑逻辑。
+   */
+  function isTopicStarForm(starForm) {
+    if (!starForm) {
+      return false;
+    }
+    const actionPath = normalizeStarActionPath(starForm.getAttribute("action"));
+    if (actionPath.startsWith("/topics/")) {
+      return true;
+    }
+    const contextInput = starForm.querySelector('input[name="context"]');
+    const context = contextInput ? String(contextInput.value || "").trim().toLowerCase() : "";
+    return context === "topic";
+  }
+
+  /**
+   * 从 Star 表单中提取仓库全名，仅接受 owner/repo/(un)star 结构。
+   */
+  function getRepoFullNameFromStarForm(starForm) {
+    if (!starForm || isTopicStarForm(starForm)) {
+      return "";
+    }
+    const actionPath = normalizeStarActionPath(starForm.getAttribute("action"));
+    const match = actionPath.match(/^\/([^/]+)\/([^/]+)\/(star|unstar)\/?$/);
+    if (!match) {
+      return "";
+    }
+    return `${match[1]}/${match[2]}`;
+  }
+
+  /**
    * 判断当前 Star 状态，兼容不同的 GitHub DOM 结构。
    */
   function getStarState(starForm, starButton) {
-    const action = starForm ? starForm.getAttribute("action") || "" : "";
-    if (action.endsWith("/unstar")) {
+    const actionPath = normalizeStarActionPath(starForm ? starForm.getAttribute("action") : "");
+    if (actionPath.endsWith("/unstar")) {
       return true;
     }
-    if (action.endsWith("/star")) {
+    if (actionPath.endsWith("/star")) {
       return false;
     }
     const label = starButton ? starButton.getAttribute("aria-label") || "" : "";
@@ -423,6 +584,13 @@
     }
     if (pressed === "false") {
       return false;
+    }
+    const text = getButtonTextToken(starButton);
+    if (text === "star" || text === "星标") {
+      return false;
+    }
+    if (text === "starred" || text === "unstar" || text === "已加星标" || text === "取消星标") {
+      return true;
     }
     return null;
   }
@@ -460,8 +628,9 @@
    * 读取仓库的 Star 状态。
    */
   function getRepoStarState(repoFullName) {
-    const form = findRepoStarForm(repoFullName);
-    const button = findRepoStarButton(form);
+    const control = findRepoStarControl(repoFullName);
+    const form = control.form;
+    const button = control.button;
     return getStarState(form, button);
   }
 
@@ -560,20 +729,21 @@
     if (!target || !(target instanceof Element)) {
       return;
     }
-    const starForm = target.closest('form[action$="/star"], form[action$="/unstar"]');
-    if (!starForm) {
-      return;
-    }
-    if (starForm.closest("#gh-stars-helper-drawer")) {
-      return;
-    }
-    const starButton = findRepoStarButton(starForm);
+    const starForm = target.closest("form[action]");
+    const starButton = starForm ? findRepoStarButton(starForm) : target.closest("button");
     if (!starButton || !starButton.contains(target)) {
       return;
     }
-    const repoFullName =
-      parseRepoFullName(starForm.getAttribute("action")) || getRepoFullNameFromPage();
+    if (starButton.closest("#gh-stars-helper-drawer")) {
+      return;
+    }
+    const repoFullName = starForm
+      ? (getRepoFullNameFromStarForm(starForm) || getRepoFullNameFromPage())
+      : getRepoFullNameFromButtonContext(starButton);
     if (!repoFullName) {
+      return;
+    }
+    if (!starForm && !isRepositoryStarButton(starButton)) {
       return;
     }
     const current = getStarState(starForm, starButton);
@@ -598,9 +768,6 @@
    * 监听 Star 点击，自动进入编辑流程。
    */
   function handleRepoStarClick(event) {
-    if (!isRepoPage()) {
-      return;
-    }
     if (!event.isTrusted) {
       return;
     }
@@ -608,20 +775,24 @@
     if (!target || !(target instanceof Element)) {
       return;
     }
-    const starForm = target.closest('form[action$="/star"], form[action$="/unstar"]');
-    if (!starForm) {
+    const starForm = target.closest("form[action]");
+    const starButton = starForm ? findRepoStarButton(starForm) : target.closest("button");
+    if (!starButton || !starButton.contains(target)) {
       return;
     }
-    const starButton = findRepoStarButton(starForm);
-    if (!starButton || !starButton.contains(target)) {
+    if (starButton.closest("#gh-stars-helper-drawer")) {
+      return;
+    }
+    if (!starForm && !isRepositoryStarButton(starButton)) {
       return;
     }
     const current = getStarState(starForm, starButton);
     if (current === true) {
       return;
     }
-    const repoFullName =
-      getRepoFullNameFromPage() || parseRepoFullName(starForm.getAttribute("action"));
+    const repoFullName = starForm
+      ? (getRepoFullNameFromStarForm(starForm) || getRepoFullNameFromPage())
+      : getRepoFullNameFromButtonContext(starButton);
     if (!repoFullName) {
       return;
     }
