@@ -1,12 +1,11 @@
 const copy = {
   zh: {
     nav: {
-      highlights: "功能亮点",
-      efficiency: "效率体验",
+      screens: "效果预览",
+      core: "核心能力",
       wechat: "公众号",
       install: "如何安装",
       sync: "同步与隐私",
-      screens: "截图",
       faq: "常见问题",
       download: "下载"
     },
@@ -17,7 +16,7 @@ const copy = {
     hero: {
       eyebrow: "浏览器扩展",
       title: "星标不再乱，收藏更有序",
-      subtitle: "在 GitHub 页面内直接管理星标：分组、标签、备注，并支持 Gist 多设备同步。",
+      subtitle: "在 GitHub 页面内完成分组、标签、备注与同步，管理不跳页。",
       ctaPrimary: "下载 CRX",
       ctaSecondary: "查看 GitHub",
       helper: "开源 · 无需离开 GitHub · 中英文与暗色模式",
@@ -28,15 +27,10 @@ const copy = {
       cardTag3: "工具",
       cardDesc: "一眼找到要用的仓库"
     },
-    highlights: {
-      eyebrow: "功能亮点",
-      title: "把星标变成可管理的收藏夹",
-      subtitle: "轻量但完整的整理体系，让收藏像项目一样可维护。"
-    },
-    efficiency: {
-      eyebrow: "效率体验",
-      title: "更快、更顺、更少跳转",
-      subtitle: "把时间留给阅读与评估，而不是翻找。",
+    core: {
+      eyebrow: "核心能力",
+      title: "一套动作，完成整理与筛选",
+      subtitle: "把重复劳动交给工具，你只关注仓库价值。",
       cards: [
         {
           title: "搜索更精准",
@@ -59,8 +53,8 @@ const copy = {
           desc: "整理与浏览在 GitHub 内完成。"
         },
         {
-          title: "排序更清晰",
-          desc: "按需求排列，优先级一眼可见。"
+          title: "同步可控",
+          desc: "版本冲突可选择保留，避免误覆盖。"
         }
       ]
     },
@@ -72,32 +66,6 @@ const copy = {
       tip: "扫码关注",
       qrAlt: "微信公众号二维码",
       qrHint: "扫码关注"
-    },
-    featureGroups: {
-      manage: {
-        title: "管理方式",
-        items: [
-          "星标分组：像文件夹一样管理收藏",
-          "标签/备注：给每个仓库加上下文",
-          "内联编辑：Stars 列表与仓库页直接修改"
-        ]
-      },
-      efficiency: {
-        title: "效率体验",
-        items: [
-          "搜索/筛选/排序：快速定位目标",
-          "Stars 与仓库页增强：无需离开 GitHub",
-          "自动语言识别：中英文界面自适配"
-        ]
-      },
-      sync: {
-        title: "同步与安全",
-        items: [
-          "Gist 多设备同步",
-          "冲突提示与版本选择",
-          "隐私可控：数据仅在本地/Gist"
-        ]
-      }
     },
     workflow: {
       eyebrow: "使用流程",
@@ -137,9 +105,10 @@ const copy = {
       ]
     },
     screens: {
-      eyebrow: "截图",
-      title: "功能截图",
-      subtitle: "三张截图展示核心使用场景。",
+      eyebrow: "效果预览",
+      title: "先看真实效果",
+      subtitle: "三张截图展示你每天会用到的核心场景。",
+      modalClose: "关闭",
       cards: [
         {
           label: "侧边抽屉",
@@ -207,12 +176,11 @@ const copy = {
   },
   en: {
     nav: {
-      highlights: "Highlights",
-      efficiency: "Efficiency",
+      screens: "Preview",
+      core: "Core Capabilities",
       wechat: "WeChat",
       install: "Install",
       sync: "Sync & Privacy",
-      screens: "Screens",
       faq: "FAQ",
       download: "Download"
     },
@@ -223,7 +191,7 @@ const copy = {
     hero: {
       eyebrow: "Browser Extension",
       title: "Star smarter, collect better.",
-      subtitle: "Manage GitHub stars in-place with groups, tags, notes, and Gist sync.",
+      subtitle: "Organize, annotate, and sync stars directly on GitHub without context switching.",
       ctaPrimary: "Download CRX",
       ctaSecondary: "View on GitHub",
       helper: "Open-source · Stay on GitHub · Bilingual & Dark mode",
@@ -234,15 +202,10 @@ const copy = {
       cardTag3: "Tools",
       cardDesc: "Find the right repo at a glance"
     },
-    highlights: {
-      eyebrow: "Highlights",
-      title: "Turn stars into a curated library",
-      subtitle: "Lightweight structure with enough power to keep collections healthy."
-    },
-    efficiency: {
-      eyebrow: "Efficiency",
-      title: "Faster, smoother, fewer detours",
-      subtitle: "Spend time evaluating repos, not hunting for them.",
+    core: {
+      eyebrow: "Core Capabilities",
+      title: "One workflow for organizing and finding",
+      subtitle: "Let the extension handle busywork so you can evaluate faster.",
       cards: [
         {
           title: "Sharper search",
@@ -265,8 +228,8 @@ const copy = {
           desc: "Organize without leaving GitHub."
         },
         {
-          title: "Clear ordering",
-          desc: "Sort by need and see priorities."
+          title: "Controlled sync",
+          desc: "Resolve conflicts with explicit version choices."
         }
       ]
     },
@@ -278,32 +241,6 @@ const copy = {
       tip: "Scan to follow",
       qrAlt: "WeChat QR code",
       qrHint: "Scan to follow"
-    },
-    featureGroups: {
-      manage: {
-        title: "Organization",
-        items: [
-          "Groups: organize stars like folders",
-          "Tags & notes: add context to every repo",
-          "Inline edit on Stars list and repo pages"
-        ]
-      },
-      efficiency: {
-        title: "Efficiency",
-        items: [
-          "Search / filter / sort to locate fast",
-          "Enhancements without leaving GitHub",
-          "Auto language switch for CN/EN"
-        ]
-      },
-      sync: {
-        title: "Sync & Trust",
-        items: [
-          "Gist sync across devices",
-          "Conflict prompts with version choice",
-          "Privacy-first: local + Gist only"
-        ]
-      }
     },
     workflow: {
       eyebrow: "Workflow",
@@ -343,9 +280,10 @@ const copy = {
       ]
     },
     screens: {
-      eyebrow: "Screens",
-      title: "Product screenshots",
-      subtitle: "Three scenes that cover the core workflow.",
+      eyebrow: "Preview",
+      title: "See the real UI first",
+      subtitle: "Three everyday scenarios before you read details.",
+      modalClose: "Close",
       cards: [
         {
           label: "Drawer",
@@ -534,6 +472,74 @@ function applyTheme(theme, persist) {
   }
 }
 
+function updateThemeToggle(theme) {
+  const toggle = document.querySelector("[data-theme-toggle]");
+  if (!toggle) {
+    return;
+  }
+  const isDark = theme === "dark";
+  const nextLabel = isDark ? "切换到浅色模式" : "切换到深色模式";
+  toggle.setAttribute("aria-label", nextLabel);
+  toggle.setAttribute("title", nextLabel);
+}
+
+function initScreenModal() {
+  const modal = document.querySelector("[data-screen-modal]");
+  if (!modal) {
+    return;
+  }
+  const modalImage = modal.querySelector("[data-screen-modal-image]");
+  const modalCaption = modal.querySelector("[data-screen-modal-caption]");
+  const modalCloseTargets = modal.querySelectorAll("[data-screen-modal-close]");
+  const screenCards = document.querySelectorAll(".screen-card");
+
+  function closeModal() {
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("has-modal-open");
+  }
+
+  function openModal(card) {
+    const image = card.querySelector("img");
+    if (!image || !modalImage) {
+      return;
+    }
+    modalImage.src = image.currentSrc || image.src;
+    modalImage.alt = image.alt || "";
+    if (modalCaption) {
+      const title = card.querySelector("h3")?.textContent?.trim();
+      const desc = card.querySelector("p")?.textContent?.trim();
+      modalCaption.textContent = [title, desc].filter(Boolean).join(" · ");
+    }
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("has-modal-open");
+  }
+
+  screenCards.forEach((card) => {
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    card.setAttribute("aria-label", card.querySelector("h3")?.textContent?.trim() || "查看截图");
+    card.addEventListener("click", () => openModal(card));
+    card.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openModal(card);
+      }
+    });
+  });
+
+  modalCloseTargets.forEach((target) => {
+    target.addEventListener("click", closeModal);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && modal.classList.contains("is-open")) {
+      closeModal();
+    }
+  });
+}
+
 function initReveal() {
   const revealItems = document.querySelectorAll("[data-reveal]");
   if (!("IntersectionObserver" in window)) {
@@ -556,7 +562,7 @@ function initReveal() {
 
 function init() {
   const langButtons = document.querySelectorAll("[data-lang-option]");
-  const themeButtons = document.querySelectorAll("[data-theme-option]");
+  const themeToggleButton = document.querySelector("[data-theme-toggle]");
   const storedLang = storage.get("ghsm-lang");
   const storedTheme = storage.get("ghsm-theme");
   const browserLang = (navigator.language || "").toLowerCase();
@@ -568,8 +574,8 @@ function init() {
 
   applyLanguage(activeLang, Boolean(storedLang));
   applyTheme(activeTheme, Boolean(storedTheme));
+  updateThemeToggle(activeTheme);
   updateButtons(langButtons, activeLang, "langOption");
-  updateButtons(themeButtons, activeTheme, "themeOption");
 
   langButtons.forEach((button) => {
     button.addEventListener("click", () => {
@@ -579,22 +585,25 @@ function init() {
     });
   });
 
-  themeButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const nextTheme = button.dataset.themeOption;
+  if (themeToggleButton) {
+    themeToggleButton.addEventListener("click", () => {
+      const currentTheme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+      const nextTheme = currentTheme === "dark" ? "light" : "dark";
       applyTheme(nextTheme, true);
-      updateButtons(themeButtons, nextTheme, "themeOption");
+      updateThemeToggle(nextTheme);
     });
-  });
+  }
 
   if (!storedTheme && themeQuery) {
     themeQuery.addEventListener("change", (event) => {
-      applyTheme(event.matches ? "dark" : "light", false);
-      updateButtons(themeButtons, event.matches ? "dark" : "light", "themeOption");
+      const nextTheme = event.matches ? "dark" : "light";
+      applyTheme(nextTheme, false);
+      updateThemeToggle(nextTheme);
     });
   }
 
   initReveal();
+  initScreenModal();
   document.body.classList.add("is-loaded");
 }
 

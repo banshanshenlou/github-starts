@@ -18,12 +18,11 @@
           <span class="brand-text">GitHub Stars Manager</span>
         </a>
         <nav class="site-nav">
-          <a href="#highlights" data-i18n="nav.highlights">功能亮点</a>
-          <a href="#efficiency" data-i18n="nav.efficiency">效率体验</a>
+          <a href="#screens" data-i18n="nav.screens">效果预览</a>
+          <a href="#core" data-i18n="nav.core">核心能力</a>
           <a href="#wechat" data-i18n="nav.wechat">公众号</a>
           <a href="#install" data-i18n="nav.install">如何安装</a>
           <a href="#sync" data-i18n="nav.sync">同步与隐私</a>
-          <a href="#screens" data-i18n="nav.screens">截图</a>
           <a href="#faq" data-i18n="nav.faq">常见问题</a>
           <a href="#download" data-i18n="nav.download">下载</a>
         </nav>
@@ -32,10 +31,19 @@
             <button type="button" data-lang-option="zh">中文</button>
             <button type="button" data-lang-option="en">EN</button>
           </div>
-          <div class="toggle" role="group" aria-label="主题切换">
-            <button type="button" data-theme-option="light" data-i18n="theme.light">浅色</button>
-            <button type="button" data-theme-option="dark" data-i18n="theme.dark">深色</button>
-          </div>
+          <button type="button" class="theme-switch" data-theme-toggle aria-label="切换到深色模式" title="切换到深色模式">
+            <span class="theme-switch-icon theme-switch-sun" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v2.2M12 19.8V22M4.93 4.93l1.56 1.56M17.51 17.51l1.56 1.56M2 12h2.2M19.8 12H22M4.93 19.07l1.56-1.56M17.51 6.49l1.56-1.56"></path>
+              </svg>
+            </span>
+            <span class="theme-switch-icon theme-switch-moon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12.7A8.7 8.7 0 1 1 11.3 3a7 7 0 0 0 9.7 9.7Z"></path>
+              </svg>
+            </span>
+          </button>
         </div>
       </header>
 
@@ -119,60 +127,91 @@
           </div>
         </section>
 
-        <section id="highlights" class="section" data-reveal>
+        <section id="screens" class="section screens-section" data-reveal>
           <div class="section-head">
-            <p class="eyebrow" data-i18n="highlights.eyebrow">功能亮点</p>
-            <h2 data-i18n="highlights.title">把星标变成可管理的收藏夹</h2>
-            <p data-i18n="highlights.subtitle">
-              轻量但完整的整理体系，让收藏像项目一样可维护。
-            </p>
+            <p class="eyebrow" data-i18n="screens.eyebrow">效果预览</p>
+            <h2 data-i18n="screens.title">先看真实效果</h2>
+            <p data-i18n="screens.subtitle">三张截图展示你每天会用到的核心场景。</p>
           </div>
-          <div class="feature-grid">
-            <article class="feature-card reveal-item" style="--delay: 0s;">
-              <h3 data-i18n="featureGroups.manage.title">管理方式</h3>
-              <ul data-i18n-list="featureGroups.manage.items"></ul>
-            </article>
-            <article class="feature-card reveal-item" style="--delay: 0.08s;">
-              <h3 data-i18n="featureGroups.efficiency.title">效率体验</h3>
-              <ul data-i18n-list="featureGroups.efficiency.items"></ul>
-            </article>
-            <article class="feature-card reveal-item" style="--delay: 0.16s;">
-              <h3 data-i18n="featureGroups.sync.title">同步与安全</h3>
-              <ul data-i18n-list="featureGroups.sync.items"></ul>
-            </article>
+          <div class="screens-grid">
+            <figure class="screen-card reveal-item" style="--delay: 0s;">
+              <div class="screen-media">
+                <img
+                  src="1.png"
+                  alt="侧边抽屉截图"
+                  loading="lazy"
+                  data-i18n-attr="alt:screens.cards.0.alt"
+                />
+                <span class="screen-badge" data-i18n="screens.cards.0.label">侧边抽屉</span>
+              </div>
+              <figcaption>
+                <h3 data-i18n="screens.cards.0.title">分组树与星标列表</h3>
+                <p data-i18n="screens.cards.0.desc">集中管理与快速筛选。</p>
+              </figcaption>
+            </figure>
+            <figure class="screen-card reveal-item" style="--delay: 0.08s;">
+              <div class="screen-media">
+                <img
+                  src="2.png"
+                  alt="Stars 列表截图"
+                  loading="lazy"
+                  data-i18n-attr="alt:screens.cards.1.alt"
+                />
+                <span class="screen-badge" data-i18n="screens.cards.1.label">Stars 列表</span>
+              </div>
+              <figcaption>
+                <h3 data-i18n="screens.cards.1.title">Stars 列表内联编辑</h3>
+                <p data-i18n="screens.cards.1.desc">不离开列表，随时标注。</p>
+              </figcaption>
+            </figure>
+            <figure class="screen-card reveal-item" style="--delay: 0.16s;">
+              <div class="screen-media">
+                <img
+                  src="3.png"
+                  alt="仓库页截图"
+                  loading="lazy"
+                  data-i18n-attr="alt:screens.cards.2.alt"
+                />
+                <span class="screen-badge" data-i18n="screens.cards.2.label">仓库页</span>
+              </div>
+              <figcaption>
+                <h3 data-i18n="screens.cards.2.title">仓库页内联编辑</h3>
+                <p data-i18n="screens.cards.2.desc">给每个仓库留下上下文。</p>
+              </figcaption>
+            </figure>
           </div>
         </section>
 
-        <section id="efficiency" class="section" data-reveal>
+        <section id="core" class="section" data-reveal>
           <div class="section-head">
-            <p class="eyebrow" data-i18n="efficiency.eyebrow">效率体验</p>
-            <h2 data-i18n="efficiency.title">更快、更顺、更少跳转</h2>
-            <p data-i18n="efficiency.subtitle">把时间留给阅读与评估，而不是翻找。</p>
+            <p class="eyebrow" data-i18n="core.eyebrow">核心能力</p>
+            <h2 data-i18n="core.title">一套动作，完成整理与筛选</h2>
+            <p data-i18n="core.subtitle">把重复劳动交给工具，你只关注仓库价值。</p>
           </div>
-          <div class="focus-grid">
-            <article class="focus-card reveal-item" style="--delay: 0s;">
-              <h3 data-i18n="efficiency.cards.0.title">搜索更精准</h3>
-              <p data-i18n="efficiency.cards.0.desc">标签与备注让检索更有语义。</p>
+          <div class="core-grid">
+            <article class="core-card reveal-item" style="--delay: 0s;">
+              <h3 data-i18n="core.cards.0.title">搜索更精准</h3>
+              <p data-i18n="core.cards.0.desc">标签与备注让检索更有语义。</p>
             </article>
-            <article class="focus-card reveal-item" style="--delay: 0.06s;">
-              <h3 data-i18n="efficiency.cards.1.title">分组树定位</h3>
-              <p data-i18n="efficiency.cards.1.desc">层级结构快速聚焦目标。</p>
+            <article class="core-card reveal-item" style="--delay: 0.06s;">
+              <h3 data-i18n="core.cards.1.title">分组树定位</h3>
+              <p data-i18n="core.cards.1.desc">层级结构快速聚焦目标。</p>
             </article>
-            <article class="focus-card reveal-item" style="--delay: 0.12s;">
-              <h3 data-i18n="efficiency.cards.2.title">内联编辑</h3>
-              <p data-i18n="efficiency.cards.2.desc">Stars 与仓库页即改即存。</p>
+            <article class="core-card reveal-item" style="--delay: 0.12s;">
+              <h3 data-i18n="core.cards.2.title">内联编辑</h3>
+              <p data-i18n="core.cards.2.desc">Stars 与仓库页即改即存。</p>
             </article>
-            <article class="focus-card reveal-item" style="--delay: 0.18s;">
-              <h3 data-i18n="efficiency.cards.3.title">筛选更高效</h3>
-              <p data-i18n="efficiency.cards.3.desc">组合标签快速收敛范围。</p>
+            <article class="core-card reveal-item" style="--delay: 0.18s;">
+              <h3 data-i18n="core.cards.3.title">筛选更高效</h3>
+              <p data-i18n="core.cards.3.desc">组合标签快速收敛范围。</p>
             </article>
-            <article class="focus-card reveal-item" style="--delay: 0.24s;">
-              <h3 data-i18n="efficiency.cards.4.title">无需跳转</h3>
-              <p data-i18n="efficiency.cards.4.desc">整理与浏览在 GitHub 内完成。</p>
+            <article class="core-card reveal-item" style="--delay: 0.24s;">
+              <h3 data-i18n="core.cards.4.title">无需跳转</h3>
+              <p data-i18n="core.cards.4.desc">整理与浏览在 GitHub 内完成。</p>
             </article>
-            <article class="focus-card reveal-item" style="--delay: 0.3s;">
-              <h3 data-i18n="efficiency.cards.5.title">排序更清晰</h3>
-              <p data-i18n="efficiency.cards.5.desc">按需求排列，优先级一眼可见。</p>
+            <article class="core-card reveal-item" style="--delay: 0.3s;">
+              <h3 data-i18n="core.cards.5.title">同步可控</h3>
+              <p data-i18n="core.cards.5.desc">版本冲突可选择保留，避免误覆盖。</p>
             </article>
           </div>
         </section>
@@ -241,61 +280,6 @@
               <h3 data-i18n="sync.points.5.title">可随时撤销</h3>
               <p data-i18n="sync.points.5.desc">Token 可随时撤销，仍可本地管理。</p>
             </div>
-          </div>
-        </section>
-
-        <section id="screens" class="section" data-reveal>
-          <div class="section-head">
-            <p class="eyebrow" data-i18n="screens.eyebrow">截图</p>
-            <h2 data-i18n="screens.title">功能截图</h2>
-            <p data-i18n="screens.subtitle">三张截图展示核心使用场景。</p>
-          </div>
-          <div class="screens-grid">
-            <figure class="screen-card reveal-item" style="--delay: 0s;">
-              <div class="screen-media">
-                <img
-                  src="1.png"
-                  alt="侧边抽屉截图"
-                  loading="lazy"
-                  data-i18n-attr="alt:screens.cards.0.alt"
-                />
-                <span class="screen-badge" data-i18n="screens.cards.0.label">侧边抽屉</span>
-              </div>
-              <figcaption>
-                <h3 data-i18n="screens.cards.0.title">分组树与星标列表</h3>
-                <p data-i18n="screens.cards.0.desc">集中管理与快速筛选。</p>
-              </figcaption>
-            </figure>
-            <figure class="screen-card reveal-item" style="--delay: 0.08s;">
-              <div class="screen-media">
-                <img
-                  src="2.png"
-                  alt="Stars 列表截图"
-                  loading="lazy"
-                  data-i18n-attr="alt:screens.cards.1.alt"
-                />
-                <span class="screen-badge" data-i18n="screens.cards.1.label">Stars 列表</span>
-              </div>
-              <figcaption>
-                <h3 data-i18n="screens.cards.1.title">Stars 列表内联编辑</h3>
-                <p data-i18n="screens.cards.1.desc">不离开列表，随时标注。</p>
-              </figcaption>
-            </figure>
-            <figure class="screen-card reveal-item" style="--delay: 0.16s;">
-              <div class="screen-media">
-                <img
-                  src="3.png"
-                  alt="仓库页截图"
-                  loading="lazy"
-                  data-i18n-attr="alt:screens.cards.2.alt"
-                />
-                <span class="screen-badge" data-i18n="screens.cards.2.label">仓库页</span>
-              </div>
-              <figcaption>
-                <h3 data-i18n="screens.cards.2.title">仓库页内联编辑</h3>
-                <p data-i18n="screens.cards.2.desc">给每个仓库留下上下文。</p>
-              </figcaption>
-            </figure>
           </div>
         </section>
 
@@ -386,6 +370,15 @@
           >
         </div>
       </footer>
+
+      <div class="image-modal" data-screen-modal aria-hidden="true">
+        <div class="image-modal-backdrop" data-screen-modal-close></div>
+        <div class="image-modal-dialog" role="dialog" aria-modal="true">
+          <button type="button" class="image-modal-close" data-screen-modal-close data-i18n="screens.modalClose">关闭</button>
+          <img class="image-modal-image" data-screen-modal-image src="" alt="" />
+          <p class="image-modal-caption" data-screen-modal-caption></p>
+        </div>
+      </div>
     </div>
     <script src="app.js"></script>
   </body>
