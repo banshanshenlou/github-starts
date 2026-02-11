@@ -854,23 +854,91 @@
   }
 
   /**
-   * 在仓库页插入内联编辑按钮。
+   * 解析仓库页编辑按钮挂载点：优先放在官方列表下拉入口后方。
    */
-  function resolveRepoEditInsertBeforeNode(container, starForm) {
-    let insertBeforeNode = starForm.nextSibling;
-    const userListMenu = container.querySelector(".user-list-menu");
-    if (!userListMenu) {
-      return insertBeforeNode;
+  function findRepoUserListMenuHost(starForm) {
+    let scope = starForm ? starForm.parentElement : null;
+    while (scope && scope !== document.body) {
+      const hosts = Array.from(scope.querySelectorAll("details.js-user-list-menu-container, details"));
+      const matched = hosts.find((node) => {
+        const isUserListHost =
+          node.classList.contains("js-user-list-menu-container") ||
+          Boolean(node.querySelector(".user-list-menu"));
+        if (!isUserListHost) {
+          return false;
+        }
+        return Boolean(starForm.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING);
+      });
+      if (matched) {
+        return matched;
+      }
+      scope = scope.parentElement;
+    }
+    return null;
+  }
+
+  /**
+   * 优先定位仓库页星标操作条容器，确保按钮始终追加到操作条末尾。
+   */
+  function findRepoActionGroupContainer(starForm) {
+    if (!starForm || typeof starForm.closest !== "function") {
+      return null;
+    }
+    return starForm.closest(".starred.BtnGroup.flex-1.ml-0");
+  }
+
+  /**
+   * 解析仓库页编辑按钮挂载点：优先放在官方列表下拉入口后方。
+   */
+  function resolveRepoEditMountPoint(starForm) {
+    const defaultParent = starForm.parentElement || starForm;
+    const defaultBeforeNode = starForm.nextSibling;
+    if (!defaultParent) {
+      return {
+        parent: null,
+        beforeNode: null,
+        anchoredToUserList: false
+      };
     }
 
-    const menuHost = userListMenu.closest("details");
-    if (menuHost && menuHost.parentElement === container) {
-      return menuHost.nextSibling;
+    const actionGroup = findRepoActionGroupContainer(starForm);
+    if (actionGroup) {
+      return {
+        parent: actionGroup,
+        beforeNode: null,
+        anchoredToUserList: true
+      };
     }
-    if (userListMenu.parentElement === container) {
-      return userListMenu.nextSibling;
+
+    const userListHost = findRepoUserListMenuHost(starForm);
+    if (userListHost && userListHost.parentElement) {
+      return {
+        parent: userListHost.parentElement,
+        beforeNode: userListHost.nextSibling,
+        anchoredToUserList: true
+      };
     }
-    return insertBeforeNode;
+
+    return {
+      parent: defaultParent,
+      beforeNode: defaultBeforeNode,
+      anchoredToUserList: false
+    };
+  }
+
+  /**
+   * GitHub 可能延迟渲染列表下拉，补一次延迟重排确保按钮落位正确。
+   */
+  function scheduleRepoEditButtonRelayout() {
+    if (runtime.repoEditButtonRelayoutTimer) {
+      window.clearTimeout(runtime.repoEditButtonRelayoutTimer);
+    }
+    runtime.repoEditButtonRelayoutTimer = window.setTimeout(() => {
+      runtime.repoEditButtonRelayoutTimer = null;
+      if (isRepoPage()) {
+        ensureRepoEditButton();
+      }
+    }, 900);
   }
 
   /**
@@ -885,17 +953,22 @@
     if (!starForm) {
       return;
     }
-    const container = starForm.parentElement || starForm;
-    if (!container) {
+    const mountPoint = resolveRepoEditMountPoint(starForm);
+    if (!mountPoint.parent) {
       return;
     }
-    const existing = container.querySelector(".gh-stars-helper-repo-inline-edit");
+    const existing = document.querySelector(".gh-stars-helper-repo-inline-edit");
     if (existing) {
-      const insertBeforeNode = resolveRepoEditInsertBeforeNode(container, starForm);
-      if (existing.nextSibling !== insertBeforeNode) {
-        container.insertBefore(existing, insertBeforeNode);
+      if (
+        existing.parentElement !== mountPoint.parent ||
+        existing.nextSibling !== mountPoint.beforeNode
+      ) {
+        mountPoint.parent.insertBefore(existing, mountPoint.beforeNode);
       }
       elements.repoEditButton = existing;
+      if (!mountPoint.anchoredToUserList) {
+        scheduleRepoEditButtonRelayout();
+      }
       return;
     }
     const editButton = document.createElement("button");
@@ -907,8 +980,11 @@
     editButton.addEventListener("click", () => {
       handleRepoEditClick(repoFullName, starForm, editButton);
     });
-    container.insertBefore(editButton, resolveRepoEditInsertBeforeNode(container, starForm));
+    mountPoint.parent.insertBefore(editButton, mountPoint.beforeNode);
     elements.repoEditButton = editButton;
+    if (!mountPoint.anchoredToUserList) {
+      scheduleRepoEditButtonRelayout();
+    }
   }
 
   content.repo = {
