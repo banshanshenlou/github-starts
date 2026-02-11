@@ -8,7 +8,7 @@
   const t = typeof shared.t === "function"
     ? shared.t
     : (key, substitutions, fallback) => fallback || key;
-  const { getRepoFullNameFromPage, isRepoPage } = content.utils;
+  const { getRepoFullNameFromPage, isRepoPage, decorateActionButtonWithSettingsIcon } = content.utils;
   const AUTO_SYNC_AFTER_SAVE_DELAY_MS = 5000;
 
   /**
@@ -877,7 +877,9 @@
     const editButton = document.createElement("button");
     editButton.type = "button";
     editButton.className = "gh-stars-helper-repo-inline-edit";
-    editButton.textContent = t("btnEdit", null, "编辑");
+    const buttonLabel = t("btnEdit", null, "编辑");
+    editButton.textContent = buttonLabel;
+    decorateActionButtonWithSettingsIcon(editButton, buttonLabel);
     editButton.addEventListener("click", () => {
       handleRepoEditClick(repoFullName, starForm, editButton);
     });

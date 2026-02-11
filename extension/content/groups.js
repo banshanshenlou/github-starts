@@ -8,6 +8,7 @@
   const t = typeof shared.t === "function"
     ? shared.t
     : (key, substitutions, fallback) => fallback || key;
+  const { decorateActionButtonWithSettingsIcon } = content.utils;
   const treeIndentStep = 16;
   const treeIndentBase = 8;
 
@@ -469,7 +470,9 @@
       const editButton = document.createElement("button");
       editButton.type = "button";
       editButton.className = "gh-stars-helper-tree-edit";
-      editButton.textContent = t("btnEdit", null, "编辑");
+      const buttonLabel = t("btnEdit", null, "编辑");
+      editButton.textContent = buttonLabel;
+      decorateActionButtonWithSettingsIcon(editButton, buttonLabel);
       editButton.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();

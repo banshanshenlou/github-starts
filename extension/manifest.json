@@ -19,6 +19,7 @@
         "shared/messaging.js",
         "content/context.js",
         "content/utils.js",
+        "content/icon-anim.js",
         "content/storage.js",
         "content/api.js",
         "content/groups.js",
@@ -29,6 +30,12 @@
         "content.js"
       ],
       "css": ["content.css"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/lordicon/system-regular-63-settings-cog-hover-cog-1.svg"],
+      "matches": ["https://github.com/*"]
     }
   ]
 }

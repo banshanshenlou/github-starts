@@ -24,7 +24,7 @@
   }
 
   /**
-   * 判断是否是可注入列表增强的 Stars 列表页面。
+   * 判断是否可注入列表增强的 Stars 列表页。
    */
   function isStarsListPage() {
     return isGlobalStarsPage() || isUserStarsPage();
@@ -50,7 +50,7 @@
   }
 
   /**
-   * 从链接中提取仓库全名，忽略星标或非仓库链接。
+   * 从链接中提取仓库全名，忽略星标页与非仓库链接。
    */
   function parseRepoFullName(href) {
     if (!href || typeof href !== "string") {

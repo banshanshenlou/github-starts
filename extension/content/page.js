@@ -4,7 +4,7 @@
   const root = globalThis.GhStarsHelper;
   const content = root.content;
   const { state, elements, runtime } = content;
-  const { parseRepoFullName, isStarsListPage } = content.utils;
+  const { parseRepoFullName, isStarsListPage, decorateActionButtonWithSettingsIcon } = content.utils;
   const shared = root.shared || {};
   const t = typeof shared.t === "function"
     ? shared.t
@@ -109,7 +109,9 @@
     const editBtn = document.createElement("button");
     editBtn.type = "button";
     editBtn.className = "gh-stars-helper-inline-edit";
-    editBtn.textContent = t("btnInlineEditGroup", null, "分组");
+    const buttonLabel = t("btnInlineEditGroup", null, "分组");
+    editBtn.textContent = buttonLabel;
+    decorateActionButtonWithSettingsIcon(editBtn, buttonLabel);
     editBtn.addEventListener("click", () => content.repo.openRepoEditor(repoFullName));
     container.appendChild(editBtn);
   }
