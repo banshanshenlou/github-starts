@@ -621,21 +621,22 @@
 
 /* 内联编辑按钮 */
 .gh-stars-helper-inline-edit {
-  border: 1px solid var(--color-border-default);
-  background: var(--color-bg-secondary);
+  border: 1px solid var(--button-default-borderColor-rest, var(--color-border-default));
+  background: var(--button-default-bgColor-rest, var(--color-bg-secondary));
   border-radius: var(--radius-md);
   padding: 2px 6px;
   font-size: var(--btn-font-size-xs);
   cursor: pointer;
   transition: all var(--transition-fast);
   font-weight: var(--font-weight-medium);
+  color: var(--button-default-fgColor-rest, var(--color-text-primary));
   min-width: 28px;
   min-height: 24px;
 }
 
 .gh-stars-helper-inline-edit:hover {
-  background: var(--color-bg-tertiary);
-  border-color: var(--color-border-emphasis);
+  background: var(--button-default-bgColor-hover, var(--color-bg-tertiary));
+  border-color: var(--button-default-borderColor-hover, var(--color-border-emphasis));
 }
 
 /* 统一图标按钮视觉，不影响语义与可访问性。 */
@@ -663,6 +664,7 @@
   display: block;
   object-fit: contain;
   background: transparent;
+  filter: var(--gh-stars-helper-settings-icon-filter, none);
 }
 
 @keyframes ghStarsHelperSettingsSpin {
@@ -1141,8 +1143,8 @@
 }
 
 .gh-stars-helper-tree-edit {
-  border: 1px solid var(--color-border-default);
-  background: var(--color-bg-secondary);
+  border: 1px solid var(--button-default-borderColor-rest, var(--color-border-default));
+  background: var(--button-default-bgColor-rest, var(--color-bg-secondary));
   border-radius: var(--radius-sm);
   padding: 3px 6px;
   font-size: var(--btn-font-size-xs);
@@ -1150,6 +1152,7 @@
   white-space: nowrap;
   transition: all var(--transition-fast);
   font-weight: var(--font-weight-medium);
+  color: var(--button-default-fgColor-rest, var(--color-text-primary));
   min-width: 28px;
   min-height: 24px;
   margin-left: auto;
@@ -1157,8 +1160,8 @@
 }
 
 .gh-stars-helper-tree-edit:hover {
-  background: var(--color-bg-tertiary);
-  border-color: var(--color-border-emphasis);
+  background: var(--button-default-bgColor-hover, var(--color-bg-tertiary));
+  border-color: var(--button-default-borderColor-hover, var(--color-border-emphasis));
 }
 
 /* 分组控制 */
@@ -1232,8 +1235,8 @@
 }
 
 .gh-stars-helper-tree-edit {
-  border: 1px solid var(--color-border-default);
-  background: var(--color-bg-secondary);
+  border: 1px solid var(--button-default-borderColor-rest, var(--color-border-default));
+  background: var(--button-default-bgColor-rest, var(--color-bg-secondary));
   border-radius: var(--radius-sm);
   padding: 3px 6px;
   font-size: var(--btn-font-size-xs);
@@ -1241,18 +1244,19 @@
   white-space: nowrap;
   transition: all var(--transition-fast);
   font-weight: var(--font-weight-medium);
+  color: var(--button-default-fgColor-rest, var(--color-text-primary));
   min-width: 28px;
   min-height: 24px;
 }
 
 .gh-stars-helper-tree-edit:hover {
-  background: var(--color-bg-tertiary);
-  border-color: var(--color-border-emphasis);
+  background: var(--button-default-bgColor-hover, var(--color-bg-tertiary));
+  border-color: var(--button-default-borderColor-hover, var(--color-border-emphasis));
 }
 
 .gh-stars-helper-repo-inline-edit {
-  border: 1px solid var(--color-border-default);
-  background: var(--color-bg-secondary);
+  border: 1px solid var(--button-default-borderColor-rest, var(--color-border-default));
+  background: var(--button-default-bgColor-rest, var(--color-bg-secondary));
   border-radius: var(--radius-md);
   padding: 4px 8px;
   font-size: var(--font-size-sm);
@@ -1260,13 +1264,24 @@
   margin-left: var(--space-2);
   transition: all var(--transition-fast);
   font-weight: var(--font-weight-medium);
+  color: var(--button-default-fgColor-rest, var(--color-text-primary));
   min-width: 32px;
   min-height: 28px;
 }
 
 .gh-stars-helper-repo-inline-edit:hover {
-  background: var(--color-bg-tertiary);
-  border-color: var(--color-border-emphasis);
+  background: var(--button-default-bgColor-hover, var(--color-bg-tertiary));
+  border-color: var(--button-default-borderColor-hover, var(--color-border-emphasis));
+}
+
+html[data-color-mode="dark"] .gh-stars-helper-settings-icon-image {
+  --gh-stars-helper-settings-icon-filter: brightness(0) invert(1);
+}
+
+@media (prefers-color-scheme: dark) {
+  .gh-stars-helper-settings-icon-image {
+    --gh-stars-helper-settings-icon-filter: brightness(0) invert(1);
+  }
 }
 
 /* 移动端适配 */
@@ -1388,11 +1403,17 @@
   .gh-stars-helper-manage-btn,
   .gh-stars-helper-modal-actions button,
   .gh-stars-helper-group-actions button,
-  .gh-stars-helper-tree-edit,
-  .gh-stars-helper-inline-edit,
   .gh-stars-helper-input-clear {
     min-height: 44px;
     min-width: 44px;
+  }
+
+  .gh-stars-helper-tree-edit,
+  .gh-stars-helper-inline-edit,
+  .gh-stars-helper-repo-inline-edit {
+    min-height: 32px;
+    min-width: 32px;
+    padding: 0;
   }
 
   .gh-stars-helper-filters input,
@@ -1426,8 +1447,11 @@
   }
 
   .gh-stars-helper-group-actions button,
-  .gh-stars-helper-tree-edit {
+  .gh-stars-helper-tree-edit,
+  .gh-stars-helper-inline-edit,
+  .gh-stars-helper-repo-inline-edit {
     min-height: 32px;
     min-width: 32px;
+    padding: 0;
   }
 }
