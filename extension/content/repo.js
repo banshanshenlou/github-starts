@@ -856,6 +856,26 @@
   /**
    * 在仓库页插入内联编辑按钮。
    */
+  function resolveRepoEditInsertBeforeNode(container, starForm) {
+    let insertBeforeNode = starForm.nextSibling;
+    const userListMenu = container.querySelector(".user-list-menu");
+    if (!userListMenu) {
+      return insertBeforeNode;
+    }
+
+    const menuHost = userListMenu.closest("details");
+    if (menuHost && menuHost.parentElement === container) {
+      return menuHost.nextSibling;
+    }
+    if (userListMenu.parentElement === container) {
+      return userListMenu.nextSibling;
+    }
+    return insertBeforeNode;
+  }
+
+  /**
+   * 在仓库页插入内联编辑按钮。
+   */
   function ensureRepoEditButton() {
     const repoFullName = getRepoFullNameFromPage();
     if (!repoFullName) {
@@ -871,6 +891,10 @@
     }
     const existing = container.querySelector(".gh-stars-helper-repo-inline-edit");
     if (existing) {
+      const insertBeforeNode = resolveRepoEditInsertBeforeNode(container, starForm);
+      if (existing.nextSibling !== insertBeforeNode) {
+        container.insertBefore(existing, insertBeforeNode);
+      }
       elements.repoEditButton = existing;
       return;
     }
@@ -883,7 +907,7 @@
     editButton.addEventListener("click", () => {
       handleRepoEditClick(repoFullName, starForm, editButton);
     });
-    container.insertBefore(editButton, starForm.nextSibling);
+    container.insertBefore(editButton, resolveRepoEditInsertBeforeNode(container, starForm));
     elements.repoEditButton = editButton;
   }
 
