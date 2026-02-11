@@ -115,6 +115,45 @@ svg {
   font-size: 18px;
 }
 
+.brand-logo-crop {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-logo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.45);
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.brand-logo-light {
+  opacity: 1;
+}
+
+.brand-logo-dark {
+  opacity: 0;
+}
+
+:root[data-theme="dark"] .brand-logo-light {
+  opacity: 0;
+}
+
+:root[data-theme="dark"] .brand-logo-dark {
+  opacity: 1;
+}
+
 .site-nav {
   display: flex;
   gap: 16px;
