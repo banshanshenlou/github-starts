@@ -79,24 +79,34 @@
 /* 管理按钮 - 可拖拽浮动按钮 */
 .gh-stars-helper-manage-btn {
   margin-left: var(--space-3);
-  padding: var(--btn-padding-md);
+  width: 48px;
+  height: 48px;
+  padding: 0;
   border: 1px solid var(--color-border-default);
   background: var(--color-bg-secondary);
   color: var(--color-text-primary);
-  border-radius: var(--radius-md);
+  border-radius: 12px;
   cursor: grab;
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  line-height: var(--line-height-tight);
-  white-space: nowrap;
+  justify-content: center;
+  gap: 0;
+  font-size: 0;
+  line-height: 1;
+  white-space: normal;
   user-select: none;
   touch-action: none;
+  overflow: hidden;
   z-index: var(--z-floating);
   transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
   box-shadow: var(--shadow-sm);
+}
+
+.gh-stars-helper-manage-logo {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
 .gh-stars-helper-manage-btn.attention {
@@ -1396,10 +1406,12 @@
 
 @media (hover: none) and (pointer: coarse) and (max-width: 720px) {
   .gh-stars-helper-manage-btn {
-    min-height: 32px;
-    min-width: auto;
-    padding: var(--btn-padding-sm);
-    font-size: var(--font-size-sm);
+    min-height: 44px;
+    min-width: 44px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    font-size: 0;
   }
 
   .gh-stars-helper-modal-actions button {

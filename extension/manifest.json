@@ -34,7 +34,10 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["assets/lordicon/system-regular-63-settings-cog-hover-cog-1.svg"],
+      "resources": [
+        "assets/lordicon/system-regular-63-settings-cog-hover-cog-1.svg",
+        "assets/branding/manage-logo.png"
+      ],
       "matches": ["https://github.com/*"]
     }
   ]

@@ -5,9 +5,24 @@
   const content = root.content;
   const shared = root.shared || {};
   const { state, elements, runtime } = content;
+  const MANAGE_BUTTON_LOGO_SRC = "assets/branding/manage-logo.png";
   const t = typeof shared.t === "function"
     ? shared.t
     : (key, substitutions, fallback) => fallback || key;
+
+  /**
+   * 将扩展内相对资源路径转换为可访问 URL。
+   */
+  function getExtensionAssetUrl(relativePath) {
+    if (
+      typeof chrome !== "undefined" &&
+      chrome.runtime &&
+      typeof chrome.runtime.getURL === "function"
+    ) {
+      return chrome.runtime.getURL(relativePath);
+    }
+    return relativePath;
+  }
 
   /**
    * 获取当前最上层的弹框遮罩。
@@ -94,7 +109,22 @@
     button.id = "gh-stars-helper-manage-btn";
     button.className = "gh-stars-helper-manage-btn floating";
     button.type = "button";
-    button.textContent = t("manageButtonLabel", null, "github-starts");
+    const buttonLabel = t("manageButtonLabel", null, "github-starts");
+    button.setAttribute("aria-label", buttonLabel);
+    button.title = buttonLabel;
+
+    const logo = document.createElement("img");
+    logo.className = "gh-stars-helper-manage-logo";
+    logo.alt = "";
+    logo.decoding = "async";
+    logo.src = getExtensionAssetUrl(MANAGE_BUTTON_LOGO_SRC);
+
+    const srOnlyText = document.createElement("span");
+    srOnlyText.className = "gh-stars-helper-sr-only";
+    srOnlyText.textContent = buttonLabel;
+
+    button.appendChild(logo);
+    button.appendChild(srOnlyText);
     button.addEventListener("click", () => {
       if (runtime.suppressManageButtonClick) {
         return;
