@@ -107,6 +107,10 @@
   height: 100%;
   display: block;
   object-fit: cover;
+  object-position: center;
+  transform: scale(1.35);
+  transform-origin: center;
+  pointer-events: none;
 }
 
 .gh-stars-helper-manage-btn.attention {
