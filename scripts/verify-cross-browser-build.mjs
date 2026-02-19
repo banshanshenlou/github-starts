@@ -20,6 +20,16 @@ function ensureFileExists(filePath) {
   assert(fs.existsSync(filePath), `缺少文件: ${filePath}`);
 }
 
+function readPackageVersion() {
+  const packageJsonPath = path.join(root, "package.json");
+  const packageJson = readJson(packageJsonPath);
+  const version = packageJson && typeof packageJson.version === "string"
+    ? packageJson.version.trim()
+    : "";
+  assert(version.length > 0, "package.json 缺少有效的 version 字段");
+  return version;
+}
+
 function verifyCommonManifest(manifest, browserName) {
   assert(manifest.manifest_version === 3, `${browserName}: manifest_version 必须为 3`);
   assert(Array.isArray(manifest.permissions), `${browserName}: permissions 缺失`);
@@ -84,6 +94,7 @@ function verifyBrowserOutput(browserDir, browserName, expectedBackgroundMode) {
 }
 
 function main() {
+  const version = readPackageVersion();
   const chromeDir = path.join(outputDir, "chrome-mv3");
   const firefoxDir = path.join(outputDir, "firefox-mv3");
 
@@ -93,8 +104,8 @@ function main() {
   const chrome = verifyBrowserOutput(chromeDir, "chrome-mv3", "service_worker");
   const firefox = verifyBrowserOutput(firefoxDir, "firefox-mv3", "scripts");
 
-  const chromeZip = path.join(outputDir, "github-stars-manager-0.1.4-chrome.zip");
-  const firefoxZip = path.join(outputDir, "github-stars-manager-0.1.4-firefox.zip");
+  const chromeZip = path.join(outputDir, `github-stars-manager-${version}-chrome.zip`);
+  const firefoxZip = path.join(outputDir, `github-stars-manager-${version}-firefox.zip`);
   ensureFileExists(chromeZip);
   ensureFileExists(firefoxZip);
 
