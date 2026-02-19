@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "__MSG_extensionName__",
-  "version": "0.1.4",
+  "version": "0.1.6",
   "description": "__MSG_extensionDescription__",
   "default_locale": "zh_CN",
   "permissions": ["storage", "alarms"],
@@ -36,7 +36,8 @@
     {
       "resources": [
         "assets/lordicon/system-regular-63-settings-cog-hover-cog-1.svg",
-        "assets/branding/manage-logo.png"
+        "assets/branding/logo.png",
+        "assets/branding/logo-dark.png"
       ],
       "matches": ["https://github.com/*"]
     }

@@ -5,7 +5,7 @@ export default defineConfig({
   manifest: {
     name: "__MSG_extensionName__",
     description: "__MSG_extensionDescription__",
-    version: "0.1.5",
+    version: "0.1.6",
     default_locale: "zh_CN",
     permissions: ["storage", "alarms"],
     host_permissions: ["https://github.com/*", "https://api.github.com/*"],
@@ -13,7 +13,8 @@ export default defineConfig({
       {
         resources: [
           "assets/lordicon/system-regular-63-settings-cog-hover-cog-1.svg",
-          "assets/branding/manage-logo.png"
+          "assets/branding/logo.png",
+          "assets/branding/logo-dark.png"
         ],
         matches: ["https://github.com/*"]
       }

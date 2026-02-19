@@ -117,9 +117,9 @@ svg {
 
 .brand-logo-crop {
   position: relative;
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
+  width: 96px;
+  height: 32px;
+  border-radius: 10px;
   overflow: hidden;
   box-shadow: var(--shadow);
   display: inline-flex;
@@ -132,9 +132,8 @@ svg {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  transform: scale(1.45);
-  transform-origin: center;
+  object-fit: contain;
+  transform: none;
   pointer-events: none;
 }
 

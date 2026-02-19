@@ -72,7 +72,8 @@ function verifyBrowserOutput(browserDir, browserName, expectedBackgroundMode) {
   ensureFileExists(path.join(browserDir, "options.html"));
   ensureFileExists(path.join(browserDir, "_locales", "zh_CN", "messages.json"));
   ensureFileExists(path.join(browserDir, "_locales", "en", "messages.json"));
-  ensureFileExists(path.join(browserDir, "assets", "branding", "manage-logo.png"));
+  ensureFileExists(path.join(browserDir, "assets", "branding", "logo.png"));
+  ensureFileExists(path.join(browserDir, "assets", "branding", "logo-dark.png"));
   ensureFileExists(path.join(browserDir, "assets", "lordicon", "system-regular-63-settings-cog-hover-cog-1.svg"));
 
   const contentScript = manifest.content_scripts[0];

@@ -5,7 +5,8 @@
   const content = root.content;
   const shared = root.shared || {};
   const { state, elements, runtime } = content;
-  const MANAGE_BUTTON_LOGO_SRC = "assets/branding/manage-logo.png";
+  const MANAGE_BUTTON_LOGO_LIGHT_SRC = "assets/branding/logo.png";
+  const MANAGE_BUTTON_LOGO_DARK_SRC = "assets/branding/logo-dark.png";
   const t = typeof shared.t === "function"
     ? shared.t
     : (key, substitutions, fallback) => fallback || key;
@@ -123,17 +124,24 @@
     button.setAttribute("aria-label", buttonLabel);
     button.title = buttonLabel;
 
-    const logo = document.createElement("img");
-    logo.className = "gh-stars-helper-manage-logo";
-    logo.alt = "";
-    logo.decoding = "async";
-    logo.src = getExtensionAssetUrl(MANAGE_BUTTON_LOGO_SRC);
+    const logoLight = document.createElement("img");
+    logoLight.className = "gh-stars-helper-manage-logo gh-stars-helper-manage-logo-light";
+    logoLight.alt = "";
+    logoLight.decoding = "async";
+    logoLight.src = getExtensionAssetUrl(MANAGE_BUTTON_LOGO_LIGHT_SRC);
+
+    const logoDark = document.createElement("img");
+    logoDark.className = "gh-stars-helper-manage-logo gh-stars-helper-manage-logo-dark";
+    logoDark.alt = "";
+    logoDark.decoding = "async";
+    logoDark.src = getExtensionAssetUrl(MANAGE_BUTTON_LOGO_DARK_SRC);
 
     const srOnlyText = document.createElement("span");
     srOnlyText.className = "gh-stars-helper-sr-only";
     srOnlyText.textContent = buttonLabel;
 
-    button.appendChild(logo);
+    button.appendChild(logoLight);
+    button.appendChild(logoDark);
     button.appendChild(srOnlyText);
     button.addEventListener("click", () => {
       if (runtime.suppressManageButtonClick) {
