@@ -12,9 +12,15 @@ GitHub Stars Manager is a browser extension that enhances GitHub starred reposit
 - i18n: auto language selection based on system locale
 
 ## Install (Dev)
-1. Open the browser extensions page and enable Developer mode
-2. Click "Load unpacked" and select `extension/`
-3. Open a GitHub Stars list page or any repository page
+1. Install dependencies: `npm install`
+2. Build extension:
+   - Chrome/Edge: `npm run build`
+   - Firefox (MV3): `npm run build:firefox`
+3. Open the browser extensions page and enable Developer mode
+4. Click "Load unpacked" and select output directory:
+   - Chrome/Edge: `.output/chrome-mv3`
+   - Firefox: `.output/firefox-mv3`
+5. Open a GitHub Stars list page or any repository page
 
 ## Usage
 1. Fill in PAT and Gist info on the settings page
@@ -24,12 +30,21 @@ GitHub Stars Manager is a browser extension that enhances GitHub starred reposit
 Follow the in-app setup steps if you need guidance for PAT and Gist.
 
 ## Package & Release
-- Update version: `extension/manifest.json`
-- Build zip (PowerShell):
+- Update version: `wxt.config.ts` and `package.json`
+- Build zip:
 
-```powershell
-Compress-Archive -Path extension\* -DestinationPath dist\github-stars-manager-v0.1.2.zip -Force
+```bash
+npm run zip
+npm run zip:firefox
 ```
+
+Build verification:
+
+```bash
+npm run verify:build
+```
+
+`extension/` is kept as a legacy source snapshot during migration for rollback and comparison.
 
 ## Star History
 ![Star History](https://api.star-history.com/svg?repos=banshanshenlou/github-starts&type=Date)

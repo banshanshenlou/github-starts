@@ -1,0 +1,22 @@
+import { defineConfig } from "wxt";
+
+export default defineConfig({
+  srcDir: "src",
+  manifest: {
+    name: "__MSG_extensionName__",
+    description: "__MSG_extensionDescription__",
+    version: "0.1.4",
+    default_locale: "zh_CN",
+    permissions: ["storage", "alarms"],
+    host_permissions: ["https://github.com/*", "https://api.github.com/*"],
+    web_accessible_resources: [
+      {
+        resources: [
+          "assets/lordicon/system-regular-63-settings-cog-hover-cog-1.svg",
+          "assets/branding/manage-logo.png"
+        ],
+        matches: ["https://github.com/*"]
+      }
+    ]
+  }
+});
