@@ -715,6 +715,32 @@
     content.api.updateGroups(next);
   }
 
+  /**
+   * 批量设置所有分组（含未分组区）的折叠状态并立即刷新树。
+   */
+  function setAllGroupsCollapsed(collapsed) {
+    const groups = state.meta?.groups || [];
+    groups.forEach((group) => {
+      state.groupCollapse[group.id] = collapsed;
+    });
+    state.groupCollapse.__ungrouped__ = collapsed;
+    renderGroupTree();
+  }
+
+  /**
+   * 展开当前分组树的全部节点，便于批量浏览仓库。
+   */
+  function expandAllGroups() {
+    setAllGroupsCollapsed(false);
+  }
+
+  /**
+   * 折叠当前分组树的全部节点，便于快速收拢视图。
+   */
+  function collapseAllGroups() {
+    setAllGroupsCollapsed(true);
+  }
+
   content.groups = {
     getGroupChildren,
     getGroupDepth,
@@ -734,6 +760,9 @@
     renameGroup,
     collectDescendantIds,
     deleteGroup,
-    moveGroup
+    moveGroup,
+    setAllGroupsCollapsed,
+    expandAllGroups,
+    collapseAllGroups
   };
 })();

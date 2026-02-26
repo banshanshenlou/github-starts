@@ -5,7 +5,7 @@ export default defineConfig({
   manifest: {
     name: "__MSG_extensionName__",
     description: "__MSG_extensionDescription__",
-    version: "0.1.6",
+    version: "0.1.7",
     default_locale: "zh_CN",
     permissions: ["storage", "alarms"],
     host_permissions: ["https://github.com/*", "https://api.github.com/*"],

@@ -201,6 +201,42 @@
   }
 
   /**
+   * 查找分组树最近的可滚动容器，兼容抽屉主体与未来嵌套布局。
+   */
+  function getGroupTreeScrollContainer() {
+    if (!elements.groupTree) {
+      return null;
+    }
+    let current = elements.groupTree;
+    while (current) {
+      const overflowY = window.getComputedStyle(current).overflowY;
+      const isScrollable = /(auto|scroll|overlay)/.test(overflowY)
+        && current.scrollHeight - current.clientHeight > 1;
+      if (isScrollable) {
+        return current;
+      }
+      current = current.parentElement;
+    }
+    return elements.groupTree;
+  }
+
+  /**
+   * 快速滚动分组树到顶部或底部。
+   */
+  function scrollGroupTreeToBoundary(position) {
+    const container = getGroupTreeScrollContainer();
+    if (!container) {
+      return;
+    }
+    const targetTop = position === "bottom" ? container.scrollHeight : 0;
+    if (typeof container.scrollTo === "function") {
+      container.scrollTo({ top: targetTop, behavior: "smooth" });
+      return;
+    }
+    container.scrollTop = targetTop;
+  }
+
+  /**
    * 创建抽屉与遮罩结构，并绑定交互事件。
    */
   function ensureDrawer() {
@@ -281,7 +317,39 @@
         <div class="gh-stars-helper-groups">
           <div class="gh-stars-helper-section-header">
             <span>${t("sectionGroups", null, "分组")}</span>
-            <button class="gh-stars-helper-add-group" type="button">${t("btnAddGroup", null, "新增")}</button>
+            <div class="gh-stars-helper-section-actions">
+              <div class="gh-stars-helper-tree-quick-actions">
+                <button
+                  class="gh-stars-helper-tree-quick gh-stars-helper-tree-quick-top"
+                  type="button"
+                  aria-label="${t("btnTreeScrollTop", null, "滚动到顶部")}"
+                  title="${t("btnTreeScrollTop", null, "滚动到顶部")}">
+                  <span class="gh-stars-helper-tree-quick-icon" aria-hidden="true"></span>
+                </button>
+                <button
+                  class="gh-stars-helper-tree-quick gh-stars-helper-tree-quick-bottom"
+                  type="button"
+                  aria-label="${t("btnTreeScrollBottom", null, "滚动到底部")}"
+                  title="${t("btnTreeScrollBottom", null, "滚动到底部")}">
+                  <span class="gh-stars-helper-tree-quick-icon" aria-hidden="true"></span>
+                </button>
+                <button
+                  class="gh-stars-helper-tree-quick gh-stars-helper-tree-quick-expand"
+                  type="button"
+                  aria-label="${t("btnExpandAllGroups", null, "展开全部分组")}"
+                  title="${t("btnExpandAllGroups", null, "展开全部分组")}">
+                  <span class="gh-stars-helper-tree-quick-icon" aria-hidden="true"></span>
+                </button>
+                <button
+                  class="gh-stars-helper-tree-quick gh-stars-helper-tree-quick-collapse"
+                  type="button"
+                  aria-label="${t("btnCollapseAllGroups", null, "折叠全部分组")}"
+                  title="${t("btnCollapseAllGroups", null, "折叠全部分组")}">
+                  <span class="gh-stars-helper-tree-quick-icon" aria-hidden="true"></span>
+                </button>
+              </div>
+              <button class="gh-stars-helper-add-group" type="button">${t("btnAddGroup", null, "新增")}</button>
+            </div>
           </div>
           <div class="gh-stars-helper-group-tree"></div>
         </div>
@@ -313,6 +381,11 @@
     elements.groupTree = drawer.querySelector(".gh-stars-helper-group-tree");
     const searchClear = drawer.querySelector(".gh-stars-helper-search-clear");
     const tagsClear = drawer.querySelector(".gh-stars-helper-tags-clear");
+    const addGroupButton = drawer.querySelector(".gh-stars-helper-add-group");
+    const treeQuickTopButton = drawer.querySelector(".gh-stars-helper-tree-quick-top");
+    const treeQuickBottomButton = drawer.querySelector(".gh-stars-helper-tree-quick-bottom");
+    const treeQuickExpandButton = drawer.querySelector(".gh-stars-helper-tree-quick-expand");
+    const treeQuickCollapseButton = drawer.querySelector(".gh-stars-helper-tree-quick-collapse");
 
     overlay.addEventListener("click", () => toggleDrawer(false));
     drawer.querySelector(".gh-stars-helper-close").addEventListener("click", () => toggleDrawer(false));
@@ -350,7 +423,21 @@
     });
     bindInputClear(elements.searchInput, searchClear);
     bindInputClear(elements.tagInput, tagsClear);
-    drawer.querySelector(".gh-stars-helper-add-group").addEventListener("click", () => content.groups.addGroup(null));
+    if (treeQuickTopButton) {
+      treeQuickTopButton.addEventListener("click", () => scrollGroupTreeToBoundary("top"));
+    }
+    if (treeQuickBottomButton) {
+      treeQuickBottomButton.addEventListener("click", () => scrollGroupTreeToBoundary("bottom"));
+    }
+    if (treeQuickExpandButton) {
+      treeQuickExpandButton.addEventListener("click", () => content.groups.expandAllGroups());
+    }
+    if (treeQuickCollapseButton) {
+      treeQuickCollapseButton.addEventListener("click", () => content.groups.collapseAllGroups());
+    }
+    if (addGroupButton) {
+      addGroupButton.addEventListener("click", () => content.groups.addGroup(null));
+    }
   }
 
   /**
