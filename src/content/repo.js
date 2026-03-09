@@ -674,20 +674,21 @@
     if (!event) {
       return { starForm: null, starButton: null };
     }
+    const submitter = event.submitter instanceof HTMLButtonElement ? event.submitter : null;
     const composedPath = typeof event.composedPath === "function" ? event.composedPath() : null;
     const pathElements = Array.isArray(composedPath)
       ? composedPath.filter((node) => node instanceof Element)
       : [];
-    const target = event.target instanceof Element ? event.target : (pathElements[0] || null);
+    const target = submitter || (event.target instanceof Element ? event.target : (pathElements[0] || null));
     if (!target) {
       return { starForm: null, starButton: null };
     }
     let starForm = target.closest("form[action]");
-    let starButton = starForm ? findRepoStarButton(starForm) : target.closest("button");
+    let starButton = submitter || (starForm ? findRepoStarButton(starForm) : target.closest("button"));
     if (!starForm) {
       starForm = pathElements.find((node) =>
         node instanceof HTMLFormElement && node.hasAttribute("action")
-      ) || null;
+      ) || (submitter ? submitter.closest("form[action]") : null) || null;
     }
     if (!starButton) {
       starButton = pathElements.find((node) => node instanceof HTMLButtonElement) || null;
@@ -814,6 +815,7 @@
         return;
       }
       clearPendingRepoAutoEditor();
+      await applyStarCacheUpdate(pending.repoFullName, true);
       await openRepoEditor(pending.repoFullName);
     } finally {
       runtime.repoAutoOpenInProgress = false;
@@ -875,6 +877,7 @@
         return;
       }
       clearPendingRepoAutoEditor();
+      await applyStarCacheUpdate(repoFullName, true);
       await openRepoEditor(repoFullName);
     } finally {
       runtime.repoAutoOpenInProgress = false;
@@ -968,6 +971,7 @@
   function ensureRepoStarAutoOpen() {
     if (!runtime.repoStarAutoOpenAttached) {
       document.addEventListener("click", handleRepoStarClick, true);
+      document.addEventListener("submit", handleRepoStarClick, true);
       if (typeof window.PointerEvent === "function") {
         document.addEventListener("pointerup", handleRepoStarClick, true);
       }
@@ -986,6 +990,7 @@
       return;
     }
     document.addEventListener("click", handleStarToggleClick, true);
+    document.addEventListener("submit", handleStarToggleClick, true);
     if (typeof window.PointerEvent === "function") {
       document.addEventListener("pointerup", handleStarToggleClick, true);
     }
@@ -1015,9 +1020,7 @@
       }
       return;
     }
-    if (!result.already) {
-      await applyStarCacheUpdate(repoFullName, true);
-    }
+    await applyStarCacheUpdate(repoFullName, true);
     await openRepoEditor(repoFullName);
     if (editButton) {
       editButton.disabled = false;

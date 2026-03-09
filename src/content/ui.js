@@ -294,13 +294,18 @@
           </a>
         </div>
         <div class="gh-stars-helper-conflict">
-          <div class="gh-stars-helper-conflict-title">${t("conflictTitle", null, "检测到多端冲突")}</div>
+          <div class="gh-stars-helper-conflict-title">${t("conflictTitle", null, "检测到同步冲突")}</div>
           <div class="gh-stars-helper-conflict-desc">
-            ${t("conflictDesc", null, "远端 Gist 已更新，请选择保留版本。")}
+            ${t("conflictDesc", null, "本机有未同步修改，同时云端版本也变化了。")}
           </div>
+          <div class="gh-stars-helper-conflict-meta">
+            <div class="gh-stars-helper-conflict-local-line"></div>
+            <div class="gh-stars-helper-conflict-cloud-line"></div>
+          </div>
+          <div class="gh-stars-helper-conflict-hint"></div>
           <div class="gh-stars-helper-conflict-actions">
-            <button class="gh-stars-helper-conflict-remote" type="button">${t("conflictKeepRemote", null, "保留远端")}</button>
-            <button class="gh-stars-helper-conflict-local" type="button">${t("conflictKeepLocal", null, "保留本地")}</button>
+            <button class="gh-stars-helper-conflict-remote" type="button">${t("conflictKeepRemote", null, "使用云端版本")}</button>
+            <button class="gh-stars-helper-conflict-local" type="button">${t("conflictKeepLocal", null, "保留本机修改")}</button>
             <button class="gh-stars-helper-conflict-open" type="button">${t("conflictOpenGist", null, "打开 Gist")}</button>
           </div>
         </div>
@@ -382,6 +387,10 @@
     elements.optionsMessage = drawer.querySelector(".gh-stars-helper-options-message");
     elements.optionsLink = drawer.querySelector(".gh-stars-helper-options-link");
     elements.conflictBox = drawer.querySelector(".gh-stars-helper-conflict");
+    elements.conflictDesc = drawer.querySelector(".gh-stars-helper-conflict-desc");
+    elements.conflictLocalLine = drawer.querySelector(".gh-stars-helper-conflict-local-line");
+    elements.conflictCloudLine = drawer.querySelector(".gh-stars-helper-conflict-cloud-line");
+    elements.conflictHint = drawer.querySelector(".gh-stars-helper-conflict-hint");
     elements.conflictKeepRemote = drawer.querySelector(".gh-stars-helper-conflict-remote");
     elements.conflictKeepLocal = drawer.querySelector(".gh-stars-helper-conflict-local");
     elements.conflictOpenGist = drawer.querySelector(".gh-stars-helper-conflict-open");
@@ -696,7 +705,7 @@
           <p><strong>${t("helpSyncTitle", null, "同步")}</strong></p>
           <ul>
             <li>${t("helpSyncItem1", null, "点击同步按钮手动拉取最新星标与元数据")}</li>
-            <li>${t("helpSyncItem2", null, "检测到冲突时可选择保留本地或远端版本")}</li>
+            <li>${t("helpSyncItem2", null, "检测到冲突时可选择保留本机修改或使用云端版本")}</li>
           </ul>
         </div>
         <div class="gh-stars-helper-modal-actions">
@@ -724,26 +733,156 @@
   }
 
   /**
+   * 将冲突时间格式化为简短可读文本，避免在抽屉里塞入过长 ISO 字符串。
+   */
+  function formatConflictTime(value) {
+    if (!value || typeof value !== "string") {
+      return t("conflictTimeUnknown", null, "未知");
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return t("conflictTimeUnknown", null, "未知");
+    }
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${month}-${day} ${hours}:${minutes}`;
+  }
+
+  /**
+   * 汇总冲突双方的关键信息，帮助用户快速判断该保留本机还是云端。
+   */
+  function getConflictSummary() {
+    const conflict = state.conflict && typeof state.conflict === "object" ? state.conflict : null;
+    const remoteMeta = conflict && conflict.remoteMeta && typeof conflict.remoteMeta === "object"
+      ? conflict.remoteMeta
+      : {};
+    const localRevision = Number.isFinite(state.meta && state.meta.revision) ? String(state.meta.revision) : "-";
+    const remoteRevision = Number.isFinite(remoteMeta.revision) ? String(remoteMeta.revision) : "-";
+    const pendingCount = Number.isFinite(state.pendingOpsCount) ? String(state.pendingOpsCount) : "0";
+    const localUpdatedAt = formatConflictTime(state.meta && state.meta.updated_at);
+    const remoteUpdatedAt = formatConflictTime(remoteMeta.updated_at);
+    return {
+      desc: t("conflictDesc", null, "本机有未同步修改，同时云端版本也变化了。"),
+      localLine: t(
+        "conflictSummaryLocal",
+        [localRevision, pendingCount, localUpdatedAt],
+        `本机：修订 ${localRevision}，待同步 ${pendingCount} 项，最近修改 ${localUpdatedAt}`
+      ),
+      cloudLine: t(
+        "conflictSummaryCloud",
+        [remoteRevision, remoteUpdatedAt],
+        `云端：修订 ${remoteRevision}，最近修改 ${remoteUpdatedAt}`
+      ),
+      hint: Number(pendingCount) > 0
+        ? t(
+          "conflictHintPending",
+          null,
+          "如果刚刚在这台设备上改过分组、标签或备注且还没同步，选“保留本机修改”；如果想以 Gist 最新内容为准，选“使用云端版本”。"
+        )
+        : t(
+          "conflictHintNoPending",
+          null,
+          "这台设备当前没有明显的待同步修改；如果不确定，通常优先选“使用云端版本”。"
+        )
+    };
+  }
+
+  /**
+   * 将冲突摘要同步到抽屉提示区，保证用户不点弹窗也能理解两边差异。
+   */
+  function renderConflictInfo() {
+    const hasConflict = Boolean(state.conflict);
+    if (elements.conflictBox) {
+      elements.conflictBox.classList.toggle("visible", hasConflict);
+    }
+    if (!hasConflict) {
+      return;
+    }
+    const summary = getConflictSummary();
+    if (elements.conflictDesc) {
+      elements.conflictDesc.textContent = summary.desc;
+    }
+    if (elements.conflictLocalLine) {
+      elements.conflictLocalLine.textContent = summary.localLine;
+    }
+    if (elements.conflictCloudLine) {
+      elements.conflictCloudLine.textContent = summary.cloudLine;
+    }
+    if (elements.conflictHint) {
+      elements.conflictHint.textContent = summary.hint;
+    }
+  }
+
+  /**
    * 显示冲突处理对话框。
    */
   function showConflictDialog() {
     if (!elements.drawer) {
       return;
     }
+    const existing = document.querySelector(".gh-stars-helper-conflict-overlay");
+    if (existing) {
+      existing.remove();
+    }
+    const summary = getConflictSummary();
     const overlay = document.createElement("div");
-    overlay.className = "gh-stars-helper-modal-overlay";
-    overlay.innerHTML = `
-      <div class="gh-stars-helper-modal">
-        <h3>${t("conflictTitle", null, "检测到多端冲突")}</h3>
-        <p>${t("conflictDesc", null, "远端 Gist 已更新，请选择保留版本。")}</p>
-        <div class="gh-stars-helper-modal-actions">
-          <button class="gh-stars-helper-keep-remote" type="button">${t("conflictKeepRemote", null, "保留远端")}</button>
-          <button class="gh-stars-helper-keep-local" type="button">${t("conflictKeepLocal", null, "保留本地")}</button>
-          <button class="gh-stars-helper-open-gist" type="button">${t("conflictOpenGist", null, "打开 Gist")}</button>
-          <button class="gh-stars-helper-cancel" type="button">${t("btnCancel", null, "取消")}</button>
-        </div>
-      </div>
-    `;
+    overlay.className = "gh-stars-helper-modal-overlay gh-stars-helper-conflict-overlay";
+
+    const modal = document.createElement("div");
+    modal.className = "gh-stars-helper-modal";
+
+    const title = document.createElement("h3");
+    title.textContent = t("conflictTitle", null, "检测到同步冲突");
+
+    const desc = document.createElement("p");
+    desc.textContent = summary.desc;
+
+    const localLine = document.createElement("p");
+    localLine.textContent = summary.localLine;
+
+    const cloudLine = document.createElement("p");
+    cloudLine.textContent = summary.cloudLine;
+
+    const hint = document.createElement("p");
+    hint.textContent = summary.hint;
+
+    const actions = document.createElement("div");
+    actions.className = "gh-stars-helper-modal-actions";
+
+    const keepRemoteButton = document.createElement("button");
+    keepRemoteButton.className = "gh-stars-helper-keep-remote";
+    keepRemoteButton.type = "button";
+    keepRemoteButton.textContent = t("conflictKeepRemote", null, "使用云端版本");
+
+    const keepLocalButton = document.createElement("button");
+    keepLocalButton.className = "gh-stars-helper-keep-local";
+    keepLocalButton.type = "button";
+    keepLocalButton.textContent = t("conflictKeepLocal", null, "保留本机修改");
+
+    const openGistButton = document.createElement("button");
+    openGistButton.className = "gh-stars-helper-open-gist";
+    openGistButton.type = "button";
+    openGistButton.textContent = t("conflictOpenGist", null, "打开 Gist");
+
+    const cancelButton = document.createElement("button");
+    cancelButton.className = "gh-stars-helper-cancel";
+    cancelButton.type = "button";
+    cancelButton.textContent = t("btnCancel", null, "取消");
+
+    actions.appendChild(keepRemoteButton);
+    actions.appendChild(keepLocalButton);
+    actions.appendChild(openGistButton);
+    actions.appendChild(cancelButton);
+
+    modal.appendChild(title);
+    modal.appendChild(desc);
+    modal.appendChild(localLine);
+    modal.appendChild(cloudLine);
+    modal.appendChild(hint);
+    modal.appendChild(actions);
+    overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
     // 关闭冲突弹窗并恢复页面交互。
@@ -751,16 +890,16 @@
       overlay.remove();
     };
 
-    overlay.querySelector(".gh-stars-helper-cancel").addEventListener("click", cleanup);
-    overlay.querySelector(".gh-stars-helper-keep-remote").addEventListener("click", async () => {
+    cancelButton.addEventListener("click", cleanup);
+    keepRemoteButton.addEventListener("click", async () => {
       await content.api.resolveConflictDecision("keep_remote");
       cleanup();
     });
-    overlay.querySelector(".gh-stars-helper-keep-local").addEventListener("click", async () => {
+    keepLocalButton.addEventListener("click", async () => {
       await content.api.resolveConflictDecision("keep_local");
       cleanup();
     });
-    overlay.querySelector(".gh-stars-helper-open-gist").addEventListener("click", () => {
+    openGistButton.addEventListener("click", () => {
       openGistFromConfig();
       cleanup();
     });
@@ -804,7 +943,7 @@
       const errorLabel = t("statusErrorPrefix", null, "错误: ");
       text = `${errorLabel}${status.message || t("errorSyncFailed", null, "同步失败")}`;
     } else if (status.state === "conflict") {
-      text = t("statusConflictPrompt", null, "检测到冲突，请选择处理方式。");
+      text = t("statusConflictPrompt", null, "检测到同步冲突：请在侧边栏选择保留本机或云端。");
     } else if (!state.config || !state.config.hasPat || !state.config.gistId) {
       text = t("statusNeedConfig", null, "需要配置");
     } else if (status.state !== "syncing") {
@@ -833,9 +972,7 @@
     } else {
       elements.pendingText.textContent = "";
     }
-    if (elements.conflictBox) {
-      elements.conflictBox.classList.toggle("visible", state.conflict);
-    }
+    renderConflictInfo();
     elements.statusText.textContent = text;
   }
 

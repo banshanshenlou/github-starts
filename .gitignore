@@ -6,3 +6,9 @@ node_modules/
 .wxt/
 .tmp-wxt-sample/
 .worktrees/
+skills/
+codex-session-export/
+docs/plans/
+extension.crx
+docs/wechat-article-高转发版-v0.1.4.txt
+

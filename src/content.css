@@ -422,6 +422,22 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
   font-size: var(--font-size-sm);
 }
 
+.gh-stars-helper-conflict-meta,
+.gh-stars-helper-conflict-hint {
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-base);
+  font-size: var(--font-size-xs);
+}
+
+.gh-stars-helper-conflict-meta {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.gh-stars-helper-conflict-hint {
+  color: var(--color-text-warning);
+}
+
 .gh-stars-helper-conflict-actions {
   display: flex;
   flex-wrap: wrap;

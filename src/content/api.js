@@ -14,11 +14,14 @@
   async function resolveConflictDecision(decision) {
     const res = await shared.sendMessage("resolve_conflict", { decision });
     if (res.ok) {
-      content.state.meta = res.meta || content.state.meta;
-      content.state.pendingOpsCount = 0;
-      content.state.conflict = false;
-      content.ui.renderAll();
+      await refreshState();
       return true;
+    }
+    if (res.conflict) {
+      await refreshState({ render: false });
+      content.ui.showConflictDialog();
+      content.ui.renderAll();
+      return false;
     }
     content.ui.setStatus(res.error || t("errorResolveConflictFailed", null, "处理冲突失败。"), true);
     return false;
@@ -45,7 +48,7 @@
     };
     content.state.pendingOpsCount = res.state.pendingOpsCount || 0;
     content.state.syncStatus = res.state.syncStatus || { state: "idle", message: "", updated_at: null };
-    content.state.conflict = res.state.conflict || false;
+    content.state.conflict = res.state.conflict || null;
     if (shouldRender) {
       content.ui.renderAll();
     }
@@ -83,9 +86,9 @@
 
     const res = await shared.sendMessage("sync_now", { source: syncSource });
     if (!res.ok && res.conflict) {
-      content.state.conflict = true;
+      await refreshState({ render: false });
       content.ui.showConflictDialog();
-      await refreshState();
+      content.ui.renderAll();
       return;
     }
     if (!res.ok) {
@@ -98,7 +101,7 @@
       content.state.stars = res.stars;
     }
     content.state.pendingOpsCount = 0;
-    content.state.conflict = false;
+    content.state.conflict = null;
     await refreshState();
   }
 
