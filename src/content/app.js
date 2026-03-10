@@ -5,6 +5,7 @@
   const content = root.content;
   const { state, runtime } = content;
   const { isStarsListPage, isRepoPage } = content.utils;
+  const PAGE_ENTER_META_SYNC_INTERVAL_MS = 15000;
 
   /**
    * 启动轮询刷新状态，保持列表实时更新。
@@ -49,6 +50,14 @@
    * 根据页面类型切换观察器与按钮注入逻辑。
    */
   function handlePageChange() {
+    const shouldWarmMeta = isStarsListPage() || isRepoPage();
+    if (shouldWarmMeta) {
+      void content.api.syncMeta({
+        minIntervalMs: PAGE_ENTER_META_SYNC_INTERVAL_MS,
+        render: true,
+        showDialogOnConflict: false
+      });
+    }
     if (isStarsListPage()) {
       content.page.startObserver();
       content.api.refreshState();

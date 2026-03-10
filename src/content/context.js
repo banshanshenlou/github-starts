@@ -75,6 +75,7 @@
     lastRepoAutoOpenIntentTime: 0,
     lastStarToggleIntentKey: "",
     lastStarToggleIntentTime: 0,
+    lastMetaSyncCheckAt: 0,
     escHandlerAttached: false,
     repoAutoSyncTimer: null
   };

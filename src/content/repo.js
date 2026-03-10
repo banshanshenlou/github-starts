@@ -9,9 +9,10 @@
     ? shared.t
     : (key, substitutions, fallback) => fallback || key;
   const { getRepoFullNameFromPage, isRepoPage, decorateActionButtonWithSettingsIcon } = content.utils;
-  const AUTO_SYNC_AFTER_SAVE_DELAY_MS = 5000;
+  const AUTO_SYNC_AFTER_SAVE_DELAY_MS = 800;
   const STAR_STATE_WAIT_TIMEOUT_MS = 9000;
   const STAR_EVENT_DEDUPE_WINDOW_MS = 700;
+  const PRE_EDITOR_META_SYNC_INTERVAL_MS = 15000;
   const PENDING_REPO_AUTO_EDITOR_STORAGE_KEY = "ghStarsHelperPendingRepoAutoEditor";
   const PENDING_REPO_AUTO_EDITOR_TTL_MS = 15000;
 
@@ -49,8 +50,21 @@
       if (state.pendingOpsCount <= 0) {
         return;
       }
-      content.api.syncNow("auto");
+      content.api.syncNow("light");
     }, AUTO_SYNC_AFTER_SAVE_DELAY_MS);
+  }
+
+  /**
+   * 打开编辑器前先做一次轻量拉取，尽量提前吸收远端新 revision 并暴露冲突。
+   */
+  async function syncMetaBeforeEditor() {
+    const result = await content.api.syncMeta({
+      force: true,
+      minIntervalMs: PRE_EDITOR_META_SYNC_INTERVAL_MS,
+      render: false,
+      showDialogOnConflict: true
+    });
+    return !result.conflict;
   }
 
   /**
@@ -816,6 +830,10 @@
       }
       clearPendingRepoAutoEditor();
       await applyStarCacheUpdate(pending.repoFullName, true);
+      const canOpen = await syncMetaBeforeEditor();
+      if (!canOpen) {
+        return;
+      }
       await openRepoEditor(pending.repoFullName);
     } finally {
       runtime.repoAutoOpenInProgress = false;
@@ -878,6 +896,10 @@
       }
       clearPendingRepoAutoEditor();
       await applyStarCacheUpdate(repoFullName, true);
+      const canOpen = await syncMetaBeforeEditor();
+      if (!canOpen) {
+        return;
+      }
       await openRepoEditor(repoFullName);
     } finally {
       runtime.repoAutoOpenInProgress = false;
@@ -1021,6 +1043,13 @@
       return;
     }
     await applyStarCacheUpdate(repoFullName, true);
+    const canOpen = await syncMetaBeforeEditor();
+    if (!canOpen) {
+      if (editButton) {
+        editButton.disabled = false;
+      }
+      return;
+    }
     await openRepoEditor(repoFullName);
     if (editButton) {
       editButton.disabled = false;

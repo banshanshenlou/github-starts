@@ -99,7 +99,7 @@
               stars: current.stars,
               pendingOpsCount: current.pendingOps.length,
               syncStatus: current.syncStatus,
-              conflict: current.conflict ? true : false
+              conflict: current.conflict || null
             }
           });
           return;
@@ -164,6 +164,13 @@
           // 同步走统一流程，由后台决定冲突与重试策略。
           const source = message && message.source ? message.source : "manual";
           const result = await sync.syncNowInternal(source);
+          sendResponse(result);
+          return;
+        }
+
+        if (action === "sync_meta") {
+          // 轻量拉取只检查远端 meta / revision，不拉星标列表也不主动上推本地改动。
+          const result = await sync.syncMetaInternal();
           sendResponse(result);
           return;
         }

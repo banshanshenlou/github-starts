@@ -7,6 +7,7 @@
   const { state, elements, runtime } = content;
   const MANAGE_BUTTON_LOGO_LIGHT_SRC = "assets/branding/logo.png";
   const MANAGE_BUTTON_LOGO_DARK_SRC = "assets/branding/logo-dark.png";
+  const DRAWER_OPEN_META_SYNC_INTERVAL_MS = 15000;
   const t = typeof shared.t === "function"
     ? shared.t
     : (key, substitutions, fallback) => fallback || key;
@@ -477,6 +478,11 @@
     }
     if (shouldOpen) {
       content.api.refreshState();
+      void content.api.syncMeta({
+        minIntervalMs: DRAWER_OPEN_META_SYNC_INTERVAL_MS,
+        render: true,
+        showDialogOnConflict: false
+      });
     }
   }
 

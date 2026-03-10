@@ -18,6 +18,9 @@
     if (syncSource === "manual") {
       return true;
     }
+    if (syncSource === "light") {
+      return false;
+    }
     if (stars && stars.force_fetch) {
       return true;
     }
@@ -132,6 +135,67 @@
   }
 
   /**
+   * 执行一次轻量同步，只拉取远端 Gist meta，用于进入页面或打开编辑器前预热状态。
+   */
+  async function syncMetaInternal() {
+    return withMetaWriteLock(async () => {
+      if (syncLock) {
+        return { ok: false, error: t("errorSyncInProgress", null, "同步进行中。") };
+      }
+      syncLock = true;
+      try {
+        const current = await state.getState();
+        const config = current.config;
+
+        if (!config.pat) {
+          return { ok: false, error: t("errorPatRequired", null, "需要填写 PAT。") };
+        }
+        if (!config.gistId) {
+          return { ok: false, error: t("errorGistIdRequired", null, "需要填写 Gist ID。") };
+        }
+
+        const remote = await github.fetchGistMeta(config);
+        if (remote.missingFile) {
+          await state.saveState({ conflict: null });
+          return { ok: true, meta: current.meta };
+        }
+
+        if (current.pendingOps.length > 0) {
+          if (remote.meta.revision !== current.meta.revision) {
+            const autoMerged = buildAutoMergedMeta(current.meta, remote.meta, current.pendingOps);
+            if (!autoMerged) {
+              await state.saveState({
+                conflict: { remoteMeta: remote.meta, etag: remote.etag }
+              });
+              await state.setSyncStatus(
+                "conflict",
+                t("statusRemoteChanged", null, "远端版本已变更。")
+              );
+              await state.ensureRetryAlarm(current.pendingOps.length);
+              return { ok: false, conflict: true };
+            }
+          }
+          await state.saveState({ conflict: null });
+          return { ok: true, meta: current.meta };
+        }
+
+        const nextMeta = remote.meta.revision > current.meta.revision
+          ? remote.meta
+          : current.meta;
+        await state.saveState({
+          meta: nextMeta,
+          conflict: null
+        });
+        return { ok: true, meta: nextMeta };
+      } catch (error) {
+        return { ok: false, error: error.message || t("errorSyncFailed", null, "同步失败。") };
+      } finally {
+        syncLock = false;
+      }
+    });
+  }
+
+  /**
    * 执行一次完整同步流程，负责拉取星标、对齐元数据并处理冲突。
    */
   async function syncNowInternal(source) {
@@ -142,10 +206,12 @@
       }
       syncLock = true;
       try {
-        const syncSource = source === "auto" ? "auto" : "manual";
-        const syncLabel = syncSource === "auto"
-          ? t("labelSyncAuto", null, "自动")
-          : t("labelSyncManual", null, "手动");
+        const syncSource = source === "manual"
+          ? "manual"
+          : (source === "light" ? "light" : "auto");
+        const syncLabel = syncSource === "manual"
+          ? t("labelSyncManual", null, "手动")
+          : t("labelSyncAuto", null, "自动");
         const syncingMessage = t(
           "statusSyncingWithLabel",
           [syncLabel],
@@ -419,6 +485,7 @@
 
   root.sync = {
     syncNowInternal,
+    syncMetaInternal,
     resolveConflict
   };
 })();

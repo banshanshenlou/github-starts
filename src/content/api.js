@@ -3,6 +3,7 @@
 
   const root = globalThis.GhStarsHelper;
   const content = root.content;
+  const { runtime } = content;
   const shared = root.shared || {};
   const t = typeof shared.t === "function"
     ? shared.t
@@ -69,10 +70,12 @@
    * 触发一次同步，并处理冲突与错误提示。
    */
   async function syncNow(source) {
-    const syncSource = source === "auto" ? "auto" : "manual";
-    const syncLabel = syncSource === "auto"
-      ? t("labelSyncAuto", null, "自动")
-      : t("labelSyncManual", null, "手动");
+    const syncSource = source === "manual"
+      ? "manual"
+      : (source === "light" ? "light" : "auto");
+    const syncLabel = syncSource === "manual"
+      ? t("labelSyncManual", null, "手动")
+      : t("labelSyncAuto", null, "自动");
     content.state.syncStatus = {
       state: "syncing",
       message: t(
@@ -103,6 +106,67 @@
     content.state.pendingOpsCount = 0;
     content.state.conflict = null;
     await refreshState();
+  }
+
+  /**
+   * 仅拉取远端 meta / revision，用于页面进入或打开编辑器前预热状态。
+   */
+  async function syncMeta(options) {
+    const settings = {
+      force: false,
+      minIntervalMs: 0,
+      render: true,
+      showDialogOnConflict: false,
+      showError: false,
+      ...(options || {})
+    };
+    const loaded = await ensureStateLoaded();
+    if (!loaded) {
+      return { ok: false, error: true };
+    }
+    if (!content.state.config || !content.state.config.hasPat || !content.state.config.gistId) {
+      return { ok: false, skipped: true };
+    }
+    if (content.state.conflict) {
+      if (settings.showDialogOnConflict) {
+        content.ui.showConflictDialog();
+      }
+      if (settings.render !== false) {
+        content.ui.renderAll();
+      }
+      return { ok: false, conflict: true, skipped: true };
+    }
+    const now = Date.now();
+    if (
+      !settings.force
+      && settings.minIntervalMs > 0
+      && runtime.lastMetaSyncCheckAt
+      && now - runtime.lastMetaSyncCheckAt < settings.minIntervalMs
+    ) {
+      return { ok: true, skipped: true };
+    }
+
+    const res = await shared.sendMessage("sync_meta");
+    runtime.lastMetaSyncCheckAt = Date.now();
+    if (!res.ok && res.conflict) {
+      await refreshState({ render: false });
+      if (settings.showDialogOnConflict) {
+        content.ui.showConflictDialog();
+      }
+      if (settings.render !== false) {
+        content.ui.renderAll();
+      }
+      return { ok: false, conflict: true };
+    }
+    if (!res.ok) {
+      if (settings.showError) {
+        content.ui.setStatus(res.error || t("errorSyncFailed", null, "同步失败。"), true);
+      }
+      await refreshState({ render: settings.render !== false });
+      return { ok: false, error: true };
+    }
+    await refreshState({ render: settings.render !== false });
+    return { ok: true };
   }
 
   /**
@@ -195,6 +259,7 @@
     refreshState,
     ensureStateLoaded,
     syncNow,
+    syncMeta,
     updateRepoMeta,
     updateGroups,
     updateStarCache
