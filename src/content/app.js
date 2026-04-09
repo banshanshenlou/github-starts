@@ -51,6 +51,14 @@
    */
   function handlePageChange() {
     const shouldWarmMeta = isStarsListPage() || isRepoPage();
+    if (content.debug) {
+      content.debug.log("app.handle_page_change", {
+        url: window.location.href,
+        isStarsListPage: Boolean(isStarsListPage()),
+        isRepoPage: Boolean(isRepoPage()),
+        shouldWarmMeta
+      });
+    }
     if (shouldWarmMeta) {
       void content.api.syncMeta({
         minIntervalMs: PAGE_ENTER_META_SYNC_INTERVAL_MS,
@@ -77,6 +85,12 @@
    * 初始化入口，绑定事件并确保关键 UI 存在。
    */
   function init() {
+    if (content.debug) {
+      content.debug.log("app.init", {
+        readyState: document.readyState,
+        url: window.location.href
+      });
+    }
     content.ui.ensureManageButton();
     content.repo.ensureStarCacheListener();
     handlePageChange();

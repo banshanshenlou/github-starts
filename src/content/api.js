@@ -48,6 +48,9 @@
       force_fetch: false
     };
     content.state.pendingOpsCount = res.state.pendingOpsCount || 0;
+    content.state.recentPendingRepos = Array.isArray(res.state.recentPendingRepos)
+      ? res.state.recentPendingRepos
+      : [];
     content.state.syncStatus = res.state.syncStatus || { state: "idle", message: "", updated_at: null };
     content.state.conflict = res.state.conflict || null;
     if (shouldRender) {
@@ -69,13 +72,19 @@
   /**
    * 触发一次同步，并处理冲突与错误提示。
    */
-  async function syncNow(source) {
+  async function syncNow(source, options) {
+    const settings = {
+      showToast: true,
+      ...(options || {})
+    };
     const syncSource = source === "manual"
       ? "manual"
       : (source === "light" ? "light" : "auto");
     const syncLabel = syncSource === "manual"
       ? t("labelSyncManual", null, "手动")
       : t("labelSyncAuto", null, "自动");
+    const shouldToastSyncResult = settings.showToast !== false
+      && (syncSource === "manual" || syncSource === "light");
     content.state.syncStatus = {
       state: "syncing",
       message: t(
@@ -89,15 +98,40 @@
 
     const res = await shared.sendMessage("sync_now", { source: syncSource });
     if (!res.ok && res.conflict) {
+      content.ui.setAsyncButtonState(content.elements.syncButton, {
+        state: "error",
+        label: t("buttonStateSyncFailed", null, "同步失败")
+      });
       await refreshState({ render: false });
       content.ui.showConflictDialog();
       content.ui.renderAll();
-      return;
+      return {
+        ok: false,
+        conflict: true,
+        error: t("errorSyncFailed", null, "同步失败。")
+      };
     }
     if (!res.ok) {
+      content.ui.setAsyncButtonState(content.elements.syncButton, {
+        state: "error",
+        label: t("buttonStateSyncFailed", null, "同步失败")
+      });
+      if (shouldToastSyncResult) {
+        content.ui.showToast(
+          t(
+            "statusSyncFailedWithLabel",
+            [syncLabel],
+            `${syncLabel}同步失败`
+          ),
+          { variant: "error" }
+        );
+      }
       content.ui.setStatus(res.error || t("errorSyncFailed", null, "同步失败。"), true);
       await refreshState();
-      return;
+      return {
+        ok: false,
+        error: res.error || t("errorSyncFailed", null, "同步失败。")
+      };
     }
     content.state.meta = res.meta || content.state.meta;
     if (res.stars) {
@@ -106,6 +140,21 @@
     content.state.pendingOpsCount = 0;
     content.state.conflict = null;
     await refreshState();
+    content.ui.setAsyncButtonState(content.elements.syncButton, {
+      state: "success",
+      label: t("buttonStateSynced", null, "已同步")
+    });
+    if (shouldToastSyncResult) {
+      content.ui.showToast(
+        t(
+          "statusSyncedWithLabel",
+          [syncLabel],
+          `${syncLabel}同步完成`
+        ),
+        { variant: "success" }
+      );
+    }
+    return { ok: true };
   }
 
   /**
@@ -185,6 +234,9 @@
     }
     content.state.meta = res.meta;
     content.state.pendingOpsCount = res.pendingOpsCount || 0;
+    content.state.recentPendingRepos = Array.isArray(res.recentPendingRepos)
+      ? res.recentPendingRepos
+      : [];
     content.ui.renderAll();
     return true;
   }

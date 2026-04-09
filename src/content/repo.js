@@ -9,9 +9,9 @@
     ? shared.t
     : (key, substitutions, fallback) => fallback || key;
   const { getRepoFullNameFromPage, isRepoPage, decorateActionButtonWithSettingsIcon } = content.utils;
-  const AUTO_SYNC_AFTER_SAVE_DELAY_MS = 800;
   const STAR_STATE_WAIT_TIMEOUT_MS = 9000;
   const STAR_EVENT_DEDUPE_WINDOW_MS = 700;
+  const PENDING_STAR_STATE_TTL_MS = 10000;
   const PRE_EDITOR_META_SYNC_INTERVAL_MS = 15000;
   const PENDING_REPO_AUTO_EDITOR_STORAGE_KEY = "ghStarsHelperPendingRepoAutoEditor";
   const PENDING_REPO_AUTO_EDITOR_TTL_MS = 15000;
@@ -19,66 +19,196 @@
   /**
    * 判断是否允许触发自动同步，避免缺少配置或冲突状态下反复弹错。
    */
-  function canTriggerAutoSync() {
+  function getAutoSyncBlockReason() {
     if (!state.config || !state.config.hasPat || !state.config.gistId) {
-      return false;
+      return "config_missing";
     }
     if (state.conflict) {
-      return false;
+      return "conflict";
     }
     if (state.syncStatus && state.syncStatus.state === "syncing") {
-      return false;
+      return "syncing";
     }
-    return true;
+    return "";
   }
 
   /**
-   * 保存后延迟触发自动同步，合并短时间内的连续编辑。
+   * 保存仓库元数据后立即触发轻量同步，并把阻塞原因显式回传给调用方。
    */
-  function scheduleAutoSyncAfterSave() {
-    if (!canTriggerAutoSync()) {
-      return;
-    }
-    if (runtime.repoAutoSyncTimer) {
-      window.clearTimeout(runtime.repoAutoSyncTimer);
-    }
-    runtime.repoAutoSyncTimer = window.setTimeout(() => {
-      runtime.repoAutoSyncTimer = null;
-      if (!canTriggerAutoSync()) {
-        return;
+  async function syncAfterSave() {
+    const blockReason = getAutoSyncBlockReason();
+    if (blockReason) {
+      if (content.debug) {
+        content.debug.log("repo.auto_sync.skip", {
+          reason: blockReason,
+          hasConfig: Boolean(state.config && state.config.hasPat && state.config.gistId),
+          hasConflict: Boolean(state.conflict),
+          syncState: state.syncStatus ? state.syncStatus.state : ""
+        });
       }
-      if (state.pendingOpsCount <= 0) {
-        return;
+      return { ok: false, skipped: true, reason: blockReason };
+    }
+    if (state.pendingOpsCount <= 0) {
+      if (content.debug) {
+        content.debug.log("repo.auto_sync.skip", {
+          reason: "no_pending_ops"
+        });
       }
-      content.api.syncNow("light");
-    }, AUTO_SYNC_AFTER_SAVE_DELAY_MS);
+      return { ok: true, skipped: true, reason: "no_pending_ops" };
+    }
+    if (content.debug) {
+      content.debug.log("repo.auto_sync.fire", {
+        pendingOpsCount: state.pendingOpsCount
+      });
+    }
+    return content.api.syncNow("light", { showToast: false });
+  }
+
+  /**
+   * 从本地星标缓存读取仓库状态，作为移动端 DOM 判定不稳定时的保底依据。
+   */
+  function getCachedRepoStarState(repoFullName) {
+    if (!repoFullName) {
+      return null;
+    }
+    const starItems = state.stars && state.stars.items ? state.stars.items : {};
+    return Object.prototype.hasOwnProperty.call(starItems, repoFullName) ? true : null;
+  }
+
+  /**
+   * 记录一次短期的 Star 意图，在 GitHub 移动端 DOM 延迟更新时用于等待链路兜底。
+   */
+  function setPendingStarState(repoFullName, expected) {
+    runtime.pendingStarStateRepo = repoFullName || "";
+    runtime.pendingStarStateExpected = typeof expected === "boolean" ? expected : null;
+    runtime.pendingStarStateExpiresAt = Date.now() + PENDING_STAR_STATE_TTL_MS;
+  }
+
+  /**
+   * 读取仍在有效期内的 Star 意图；过期后立即清理，避免污染后续判断。
+   */
+  function getPendingStarState(repoFullName) {
+    if (!repoFullName || runtime.pendingStarStateRepo !== repoFullName) {
+      return null;
+    }
+    if (!Number.isFinite(runtime.pendingStarStateExpiresAt) || runtime.pendingStarStateExpiresAt <= Date.now()) {
+      runtime.pendingStarStateRepo = "";
+      runtime.pendingStarStateExpected = null;
+      runtime.pendingStarStateExpiresAt = 0;
+      return null;
+    }
+    return typeof runtime.pendingStarStateExpected === "boolean"
+      ? runtime.pendingStarStateExpected
+      : null;
+  }
+
+  /**
+   * 在成功识别真实状态或等待结束后清理 Star 意图，避免后续页面误判。
+   */
+  function clearPendingStarState(repoFullName) {
+    if (!repoFullName || runtime.pendingStarStateRepo === repoFullName) {
+      runtime.pendingStarStateRepo = "";
+      runtime.pendingStarStateExpected = null;
+      runtime.pendingStarStateExpiresAt = 0;
+    }
   }
 
   /**
    * 打开编辑器前先做一次轻量拉取，尽量提前吸收远端新 revision 并暴露冲突。
    */
   async function syncMetaBeforeEditor() {
+    if (content.debug) {
+      content.debug.log("repo.sync_meta_before_editor.start");
+    }
     const result = await content.api.syncMeta({
-      force: true,
+      // 仓库页进入时已做过预热；这里优先复用短时间内的结果，避免每次点编辑都阻塞 500ms+。
+      force: false,
       minIntervalMs: PRE_EDITOR_META_SYNC_INTERVAL_MS,
       render: false,
       showDialogOnConflict: true
     });
+    if (content.debug) {
+      content.debug.log("repo.sync_meta_before_editor.result", {
+        ok: Boolean(result && result.ok),
+        conflict: Boolean(result && result.conflict),
+        skipped: Boolean(result && result.skipped)
+      });
+    }
     return !result.conflict;
+  }
+
+  /**
+   * 更新仓库页编辑按钮的临时状态，覆盖等待同步时用户“点了没反应”的空窗期。
+   */
+  function setRepoEditButtonState(button, state) {
+    if (!button) {
+      return;
+    }
+    if (!button.dataset.ghStarsHelperIdleTitle) {
+      button.dataset.ghStarsHelperIdleTitle = button.title || t("btnEdit", null, "编辑");
+    }
+    button.classList.remove("is-pending", "is-error");
+    button.setAttribute("aria-busy", "false");
+    if (state === "pending") {
+      const pendingLabel = t("buttonStateLoading", null, "加载中...");
+      button.classList.add("is-pending");
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+      button.setAttribute("aria-label", pendingLabel);
+      button.title = pendingLabel;
+      return;
+    }
+    if (state === "error") {
+      const errorLabel = t("buttonStateLoadFailed", null, "加载失败");
+      button.classList.add("is-error");
+      button.disabled = false;
+      button.setAttribute("aria-label", errorLabel);
+      button.title = errorLabel;
+      return;
+    }
+    button.disabled = false;
+    const idleLabel = button.dataset.ghStarsHelperIdleTitle || t("btnEdit", null, "编辑");
+    button.setAttribute("aria-label", idleLabel);
+    button.title = idleLabel;
   }
 
   /**
    * 打开仓库元数据编辑器。
    */
   async function openRepoEditor(repoFullName) {
+    if (content.debug) {
+      content.debug.log("repo.editor.open.start", {
+        repoFullName
+      });
+    }
     const loaded = await content.api.ensureStateLoaded();
     if (!loaded) {
+      if (content.debug) {
+        content.debug.log("repo.editor.open.abort", {
+          repoFullName,
+          reason: "state_not_loaded"
+        });
+      }
       return;
     }
     if (!state.meta) {
+      if (content.debug) {
+        content.debug.log("repo.editor.open.abort", {
+          repoFullName,
+          reason: "meta_missing"
+        });
+      }
       return;
     }
     const meta = (state.meta.repo_meta || {})[repoFullName] || {};
+    if (content.debug) {
+      content.debug.log("repo.editor.open.ready", {
+        repoFullName,
+        groupCount: Array.isArray(meta.group_ids) ? meta.group_ids.length : 0,
+        tagCount: Array.isArray(meta.tags) ? meta.tags.length : 0,
+        noteLength: typeof meta.note === "string" ? meta.note.length : 0
+      });
+    }
     const overlay = document.createElement("div");
     overlay.className = "gh-stars-helper-modal-overlay";
 
@@ -190,21 +320,29 @@
       }
       const parentDepth = parentId ? content.groups.getGroupDepth(state.meta.groups || [], parentId) : 0;
       if (parentDepth >= content.constants.MAX_GROUP_DEPTH) {
-        window.alert(t("errorGroupDepthExceeded", null, "分组层级不能超过 5 层。"));
+        content.ui.showNoticeModal(
+          t("modalAddGroupTitle", null, "添加分组"),
+          t("errorGroupDepthExceeded", null, "分组层级不能超过 5 层。")
+        );
         return;
       }
       content.ui.showInputModal(t("modalAddGroupTitle", null, "添加分组"), "", async (name) => {
         const groups = state.meta.groups ? state.meta.groups.slice() : [];
         const entry = content.groups.createGroupEntry(groups, parentId, name);
         if (!entry) {
-          return;
+          return { ok: false, message: t("errorUpdateFailed", null, "更新失败。") };
         }
         const ok = await content.api.updateGroups(groups.concat(entry));
         if (!ok) {
-          return;
+          return { ok: false, message: t("errorUpdateFailed", null, "更新失败。") };
         }
         selectedGroupIds.add(entry.id);
         renderGroupOptions(searchInput ? searchInput.value : "");
+        return { ok: true };
+      }, {
+        pendingLabel: t("buttonStateApplying", null, "处理中..."),
+        errorLabel: t("buttonStateApplyFailed", null, "处理失败"),
+        errorMessage: t("errorUpdateFailed", null, "更新失败。")
       });
     }
 
@@ -276,6 +414,7 @@
           <textarea class="gh-stars-helper-input-note" rows="2"></textarea>
         </div>
         <div class="gh-stars-helper-modal-actions">
+          <div class="gh-stars-helper-modal-message" role="status" aria-live="polite"></div>
           <button class="gh-stars-helper-save" type="button">${t("btnSave", null, "保存")}</button>
           <button class="gh-stars-helper-cancel" type="button">${t("btnCancel", null, "取消")}</button>
         </div>
@@ -332,32 +471,138 @@
     const tagsInput = overlay.querySelector(".gh-stars-helper-input-tags");
     const tagsClearButton = overlay.querySelector(".gh-stars-helper-tags-clear");
     const noteInput = overlay.querySelector(".gh-stars-helper-input-note");
+    const saveButton = overlay.querySelector(".gh-stars-helper-save");
+    const cancelButton = overlay.querySelector(".gh-stars-helper-cancel");
+    const messageEl = overlay.querySelector(".gh-stars-helper-modal-message");
     tagsInput.value = Array.isArray(meta.tags) ? meta.tags.join(", ") : "";
     noteInput.value = meta.note || "";
+    content.ui.prepareAsyncButton(saveButton, t("btnSave", null, "保存"));
+    const setModalMessage = (message, stateName) => {
+      if (!messageEl) {
+        return;
+      }
+      messageEl.textContent = message || "";
+      messageEl.dataset.state = stateName || "";
+    };
 
     // 关闭编辑器弹窗并释放 DOM。
     const cleanup = () => overlay.remove();
-    const handleSave = () => {
+    let isSaving = false;
+    const handleSave = async () => {
+      if (isSaving) {
+        return;
+      }
+      isSaving = true;
       const tags = normalizeTagInput(tagsInput.value)
         .split(/[,\s]+/)
         .map((tag) => tag.trim())
         .filter((tag) => tag.length > 0);
       const note = noteInput.value.trim();
-      const savePromise = content.api.updateRepoMeta(
+      if (content.debug) {
+        content.debug.log("repo.editor.save.click", {
+          repoFullName,
+          groupCount: selectedGroupIds.size,
+          tagCount: tags.length,
+          noteLength: note.length
+        });
+      }
+      setModalMessage("", "");
+      content.ui.setAsyncButtonState(saveButton, {
+        state: "pending",
+        label: t("buttonStateSaving", null, "保存中...")
+      });
+      if (cancelButton) {
+        cancelButton.disabled = true;
+      }
+      const ok = await content.api.updateRepoMeta(
         repoFullName,
         Array.from(selectedGroupIds),
         tags,
         note
       );
-      cleanup();
-      Promise.resolve(savePromise).then((ok) => {
-        if (ok) {
-          scheduleAutoSyncAfterSave();
+      if (content.debug) {
+        content.debug.log("repo.editor.save.result", {
+          repoFullName,
+          ok: Boolean(ok)
+        });
+      }
+      if (ok) {
+        setModalMessage(
+          t("statusRepoSaveSyncing", null, "本地已保存，正在同步到云端..."),
+          "pending"
+        );
+        content.ui.setAsyncButtonState(saveButton, {
+          state: "pending",
+          label: t("buttonStateSyncing", null, "同步中..."),
+          autoResetMs: 0
+        });
+        const syncResult = await syncAfterSave();
+        if (syncResult && syncResult.ok) {
+          setModalMessage(
+            t("statusRepoSaveSynced", null, "已同步到云端。"),
+            "success"
+          );
+          content.ui.setAsyncButtonState(saveButton, {
+            state: "success",
+            label: t("buttonStateSynced", null, "已同步"),
+            autoResetMs: 0
+          });
+          window.setTimeout(() => {
+            cleanup();
+          }, 220);
+          return;
         }
+        isSaving = false;
+        if (cancelButton) {
+          cancelButton.disabled = false;
+        }
+        content.ui.setAsyncButtonState(saveButton, {
+          state: "error",
+          label: t("buttonStateSyncFailed", null, "同步失败"),
+          autoResetMs: 0
+        });
+        if (syncResult && syncResult.reason === "config_missing") {
+          setModalMessage(
+            t("statusRepoSaveLocalOnlyConfigMissing", null, "已保存到本地，但未配置同步，尚未上传到云端。"),
+            "error"
+          );
+          return;
+        }
+        if (syncResult && syncResult.reason === "conflict") {
+          setModalMessage(
+            t("statusRepoSaveLocalOnlyConflict", null, "已保存到本地，但当前存在冲突，未执行同步。"),
+            "error"
+          );
+          return;
+        }
+        if (syncResult && syncResult.reason === "syncing") {
+          setModalMessage(
+            t("statusRepoSaveLocalOnlySyncBusy", null, "已保存到本地，当前已有同步任务在执行，请稍后重试。"),
+            "error"
+          );
+          return;
+        }
+        setModalMessage(
+          (syncResult && syncResult.error)
+            || t("statusRepoSaveLocalOnlySyncFailed", null, "已保存到本地，但同步到云端失败。"),
+          "error"
+        );
+        return;
+      }
+      isSaving = false;
+      content.ui.setAsyncButtonState(saveButton, {
+        state: "error",
+        label: t("buttonStateSaveFailed", null, "保存失败")
       });
+      if (cancelButton) {
+        cancelButton.disabled = false;
+      }
+      setModalMessage(t("errorUpdateFailed", null, "更新失败。"), "error");
     };
-    overlay.querySelector(".gh-stars-helper-cancel").addEventListener("click", cleanup);
-    overlay.querySelector(".gh-stars-helper-save").addEventListener("click", handleSave);
+    cancelButton.addEventListener("click", cleanup);
+    saveButton.addEventListener("click", () => {
+      void handleSave();
+    });
     // 支持 Ctrl+Enter 快速保存。
     overlay.addEventListener("keydown", (event) => {
       if (event.key === "Enter" && event.ctrlKey) {
@@ -649,7 +894,16 @@
     const control = findRepoStarControl(repoFullName);
     const form = control.form;
     const button = control.button;
-    return getStarState(form, button);
+    const domState = getStarState(form, button);
+    if (domState !== null) {
+      clearPendingStarState(repoFullName);
+      return domState;
+    }
+    const pendingState = getPendingStarState(repoFullName);
+    if (pendingState !== null) {
+      return pendingState;
+    }
+    return getCachedRepoStarState(repoFullName);
   }
 
   /**
@@ -657,17 +911,39 @@
    */
   function waitForRepoStarState(repoFullName, expected, timeoutMs) {
     const timeout = Number.isFinite(timeoutMs) ? timeoutMs : 4000;
+    if (content.debug) {
+      content.debug.log("repo.star.wait.start", {
+        repoFullName,
+        expected,
+        timeout
+      });
+    }
     return new Promise((resolve) => {
       const start = Date.now();
       const timer = window.setInterval(() => {
         const current = getRepoStarState(repoFullName);
         if (current === expected) {
           window.clearInterval(timer);
+          clearPendingStarState(repoFullName);
+          if (content.debug) {
+            content.debug.log("repo.star.wait.success", {
+              repoFullName,
+              expected
+            });
+          }
           resolve(true);
           return;
         }
         if (Date.now() - start >= timeout) {
           window.clearInterval(timer);
+          clearPendingStarState(repoFullName);
+          if (content.debug) {
+            content.debug.log("repo.star.wait.timeout", {
+              repoFullName,
+              expected,
+              current
+            });
+          }
           resolve(false);
         }
       }, 200);
@@ -737,6 +1013,11 @@
         PENDING_REPO_AUTO_EDITOR_STORAGE_KEY,
         JSON.stringify({ repoFullName, createdAt: Date.now() })
       );
+      if (content.debug) {
+        content.debug.log("repo.auto_editor.pending.save", {
+          repoFullName
+        });
+      }
     } catch {
       // 忽略存储异常，避免影响主流程。
     }
@@ -767,6 +1048,12 @@
         clearPendingRepoAutoEditor();
         return null;
       }
+      if (content.debug) {
+        content.debug.log("repo.auto_editor.pending.load", {
+          repoFullName: parsed.repoFullName,
+          ageMs: Date.now() - parsed.createdAt
+        });
+      }
       return { repoFullName: parsed.repoFullName, createdAt: parsed.createdAt };
     } catch {
       clearPendingRepoAutoEditor();
@@ -780,6 +1067,9 @@
   function clearPendingRepoAutoEditor() {
     try {
       window.sessionStorage.removeItem(PENDING_REPO_AUTO_EDITOR_STORAGE_KEY);
+      if (content.debug) {
+        content.debug.log("repo.auto_editor.pending.clear");
+      }
     } catch {
       // 忽略存储异常，避免影响主流程。
     }
@@ -818,6 +1108,11 @@
       return;
     }
     runtime.repoAutoOpenInProgress = true;
+    if (content.debug) {
+      content.debug.log("repo.auto_editor.resume.start", {
+        repoFullName: pending.repoFullName
+      });
+    }
     try {
       const starred = await waitForRepoStarState(
         pending.repoFullName,
@@ -826,6 +1121,12 @@
       );
       if (!starred) {
         clearPendingRepoAutoEditor();
+        if (content.debug) {
+          content.debug.log("repo.auto_editor.resume.abort", {
+            repoFullName: pending.repoFullName,
+            reason: "star_wait_timeout"
+          });
+        }
         return;
       }
       clearPendingRepoAutoEditor();
@@ -861,6 +1162,12 @@
       return;
     }
     const info = starred ? buildStarInfo(repoFullName, starredAt) : null;
+    if (content.debug) {
+      content.debug.log("repo.star_cache.apply", {
+        repoFullName,
+        starred
+      });
+    }
     await content.api.updateStarCache(repoFullName, starred, info);
   }
 
@@ -868,14 +1175,41 @@
    * 确保仓库已 Star，必要时触发点击并等待结果。
    */
   async function ensureRepoStarred(starForm, starButton) {
+    const repoFullName = getRepoFullNameFromStarForm(starForm) || getRepoFullNameFromPage();
     const current = getStarState(starForm, starButton);
-    if (current === true) {
+    const cachedState = getCachedRepoStarState(repoFullName);
+    if (content.debug) {
+      content.debug.log("repo.ensure_starred.state", {
+        current,
+        cachedState,
+        repoFullName,
+        hasStarForm: Boolean(starForm),
+        hasStarButton: Boolean(starButton)
+      });
+    }
+    if (current === true || cachedState === true) {
       return { ok: true, already: true };
     }
-    if (current === false) {
+    if (current === false && repoFullName) {
+      setPendingStarState(repoFullName, true);
       starButton.click();
-      const starred = await waitForStarred(starForm, starButton, 5000);
-      return { ok: starred, already: false };
+      const starred = await waitForStarredByRepo(repoFullName, 5000);
+      const resolved = starred || getRepoStarState(repoFullName) === true;
+      if (content.debug) {
+        content.debug.log("repo.ensure_starred.result", {
+          current,
+          repoFullName,
+          starred: resolved
+        });
+      }
+      return { ok: resolved, already: false };
+    }
+    if (content.debug) {
+      content.debug.log("repo.ensure_starred.unknown", {
+        current,
+        cachedState,
+        repoFullName
+      });
     }
     return { ok: false, unknown: true };
   }
@@ -888,10 +1222,23 @@
       return;
     }
     savePendingRepoAutoEditor(repoFullName);
+    setPendingStarState(repoFullName, true);
     runtime.repoAutoOpenInProgress = true;
+    if (content.debug) {
+      content.debug.log("repo.auto_editor.trigger.start", {
+        repoFullName
+      });
+    }
     try {
       const starred = await waitForStarredByRepo(repoFullName, STAR_STATE_WAIT_TIMEOUT_MS);
-      if (!starred) {
+      const resolved = starred || getRepoStarState(repoFullName) === true;
+      if (!resolved) {
+        if (content.debug) {
+          content.debug.log("repo.auto_editor.trigger.abort", {
+            repoFullName,
+            reason: "star_wait_timeout"
+          });
+        }
         return;
       }
       clearPendingRepoAutoEditor();
@@ -933,14 +1280,28 @@
     }
     const current = getStarState(starForm, starButton);
     if (current === null) {
+      if (content.debug) {
+        content.debug.log("repo.star_toggle.skip", {
+          reason: "state_unknown",
+          eventType: event.type
+        });
+      }
       return;
     }
     const expected = current === true ? false : true;
+    setPendingStarState(repoFullName, expected);
     if (isDuplicateStarIntent(repoFullName, "lastStarToggleIntentKey", "lastStarToggleIntentTime")) {
       return;
     }
     const done = await waitForRepoStarState(repoFullName, expected, STAR_STATE_WAIT_TIMEOUT_MS);
     if (!done) {
+      if (content.debug) {
+        content.debug.log("repo.star_toggle.abort", {
+          repoFullName,
+          expected,
+          reason: "wait_timeout"
+        });
+      }
       return;
     }
     await applyStarCacheUpdate(repoFullName, expected);
@@ -973,6 +1334,12 @@
     }
     const current = getStarState(starForm, starButton);
     if (current === true) {
+      if (content.debug) {
+        content.debug.log("repo.star_click.skip", {
+          eventType: event.type,
+          reason: "already_starred"
+        });
+      }
       return;
     }
     const repoFullName = starForm
@@ -980,6 +1347,14 @@
       : getRepoFullNameFromButtonContext(starButton);
     if (!repoFullName) {
       return;
+    }
+    if (content.debug) {
+      content.debug.log("repo.star_click", {
+        eventType: event.type,
+        repoFullName,
+        current,
+        hasStarForm: Boolean(starForm)
+      });
     }
     if (isDuplicateStarIntent(repoFullName, "lastRepoAutoOpenIntentKey", "lastRepoAutoOpenIntentTime")) {
       return;
@@ -1023,36 +1398,72 @@
    * 点击内联编辑按钮时确保已 Star 并打开编辑器。
    */
   async function handleRepoEditClick(repoFullName, starForm, editButton) {
+    const startAt = typeof performance !== "undefined" ? performance.now() : Date.now();
+    let finalButtonState = "idle";
+    if (content.debug) {
+      content.debug.log("repo.edit_click.start", {
+        repoFullName,
+        hasStarForm: Boolean(starForm)
+      });
+    }
     if (editButton) {
-      editButton.disabled = true;
+      setRepoEditButtonState(editButton, "pending");
     }
-    const starButton = findRepoStarButton(starForm);
-    if (!starButton) {
-      window.alert(t("errorStarButtonMissing", null, "未找到 Star 按钮，请手动 Star 后再试。"));
-      if (editButton) {
-        editButton.disabled = false;
+    try {
+      const starButton = findRepoStarButton(starForm);
+      if (!starButton) {
+        finalButtonState = "error";
+        if (content.debug) {
+          content.debug.log("repo.edit_click.abort", {
+            repoFullName,
+            reason: "star_button_missing"
+          });
+        }
+        content.ui.showNoticeModal(
+          t("btnEdit", null, "编辑"),
+          t("errorStarButtonMissing", null, "未找到 Star 按钮，请手动 Star 后再试。")
+        );
+        return;
       }
-      return;
-    }
-    const result = await ensureRepoStarred(starForm, starButton);
-    if (!result.ok) {
-      window.alert(t("errorAutoStarFailed", null, "无法自动 Star，请手动 Star 后再点击编辑。"));
-      if (editButton) {
-        editButton.disabled = false;
+      const result = await ensureRepoStarred(starForm, starButton);
+      if (!result.ok) {
+        finalButtonState = "error";
+        if (content.debug) {
+          content.debug.log("repo.edit_click.abort", {
+            repoFullName,
+            reason: "auto_star_failed",
+            result
+          });
+        }
+        content.ui.showNoticeModal(
+          t("btnEdit", null, "编辑"),
+          t("errorAutoStarFailed", null, "无法自动 Star，请手动 Star 后再点击编辑。")
+        );
+        return;
       }
-      return;
-    }
-    await applyStarCacheUpdate(repoFullName, true);
-    const canOpen = await syncMetaBeforeEditor();
-    if (!canOpen) {
-      if (editButton) {
-        editButton.disabled = false;
+      await applyStarCacheUpdate(repoFullName, true);
+      const canOpen = await syncMetaBeforeEditor();
+      if (!canOpen) {
+        finalButtonState = "error";
+        if (content.debug) {
+          content.debug.log("repo.edit_click.abort", {
+            repoFullName,
+            reason: "sync_meta_blocked"
+          });
+        }
+        return;
       }
-      return;
-    }
-    await openRepoEditor(repoFullName);
-    if (editButton) {
-      editButton.disabled = false;
+      await openRepoEditor(repoFullName);
+      if (content.debug) {
+        content.debug.log("repo.edit_click.opened", {
+          repoFullName,
+          elapsedMs: Math.round((typeof performance !== "undefined" ? performance.now() : Date.now()) - startAt)
+        });
+      }
+    } finally {
+      if (editButton) {
+        setRepoEditButtonState(editButton, finalButtonState);
+      }
     }
   }
 

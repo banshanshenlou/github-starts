@@ -3,7 +3,7 @@
 
   const root = globalThis.GhStarsHelper;
   const content = root.content;
-  const { state, elements, constants } = content;
+  const { state, elements, constants, runtime } = content;
   const shared = root.shared || {};
   const t = typeof shared.t === "function"
     ? shared.t
@@ -11,6 +11,48 @@
   const { decorateActionButtonWithSettingsIcon } = content.utils;
   const treeIndentStep = 16;
   const treeIndentBase = 8;
+
+  /**
+   * 获取分组树可滚动容器，供重绘前后恢复浏览位置。
+   */
+  function getGroupTreeScrollContainer() {
+    if (!elements.groupTree) {
+      return null;
+    }
+    let current = elements.groupTree;
+    while (current) {
+      const overflowY = window.getComputedStyle(current).overflowY;
+      const isScrollable = /(auto|scroll|overlay)/.test(overflowY)
+        && current.scrollHeight - current.clientHeight > 1;
+      if (isScrollable) {
+        return current;
+      }
+      current = current.parentElement;
+    }
+    return elements.groupTree;
+  }
+
+  /**
+   * 在树重绘前记录当前滚动位置，避免编辑或同步后又要重新寻找条目。
+   */
+  function captureGroupTreeScrollTop() {
+    const container = getGroupTreeScrollContainer();
+    runtime.groupTreeScrollTop = container ? container.scrollTop : 0;
+  }
+
+  /**
+   * 在树重绘后恢复滚动位置，仅在当前页面会话内生效。
+   */
+  function restoreGroupTreeScrollTop() {
+    const container = getGroupTreeScrollContainer();
+    if (!container) {
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+      container.scrollTop = Math.min(runtime.groupTreeScrollTop || 0, maxScrollTop);
+    });
+  }
 
   /**
    * 按 parent_id 构建分组子节点索引，保证渲染顺序稳定。
@@ -154,6 +196,68 @@
   }
 
   /**
+   * 统一归一化搜索词，避免不同调用点重复处理空白与大小写。
+   */
+  function normalizeSearchQuery(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
+  /**
+   * 读取仓库所属分组的完整路径标签，供搜索与结果展示共用。
+   */
+  function getRepoGroupLabels(item, groupPaths) {
+    const groupIds = Array.isArray(item.meta.group_ids) ? item.meta.group_ids : [];
+    return groupIds.map((id) => groupPaths[id]).filter(Boolean);
+  }
+
+  /**
+   * 判断仓库是否命中统一搜索词：仓库名、备注、分组路径任一命中即可。
+   */
+  function matchesUnifiedRepoQuery(item, query, groupPaths) {
+    if (!query) {
+      return true;
+    }
+    if (item.fullName.toLowerCase().includes(query)) {
+      return true;
+    }
+    const note = String(item.meta.note || "").toLowerCase();
+    if (note.includes(query)) {
+      return true;
+    }
+    const groupLabels = getRepoGroupLabels(item, groupPaths);
+    return groupLabels.some((label) => label.toLowerCase().includes(query));
+  }
+
+  /**
+   * 将命中的文本片段包装为高亮标记，其余部分保持纯文本。
+   */
+  function appendHighlightedText(container, text, query) {
+    const source = String(text || "");
+    const normalizedQuery = normalizeSearchQuery(query);
+    if (!normalizedQuery) {
+      container.textContent = source;
+      return;
+    }
+    const lower = source.toLowerCase();
+    let cursor = 0;
+    while (cursor < source.length) {
+      const index = lower.indexOf(normalizedQuery, cursor);
+      if (index === -1) {
+        container.appendChild(document.createTextNode(source.slice(cursor)));
+        break;
+      }
+      if (index > cursor) {
+        container.appendChild(document.createTextNode(source.slice(cursor, index)));
+      }
+      const mark = document.createElement("mark");
+      mark.className = "gh-stars-helper-highlight";
+      mark.textContent = source.slice(index, index + normalizedQuery.length);
+      container.appendChild(mark);
+      cursor = index + normalizedQuery.length;
+    }
+  }
+
+  /**
    * 按当前排序策略比较仓库条目。
    */
   function compareRepoItems(a, b, sortKey) {
@@ -214,7 +318,8 @@
    * 判断仓库是否符合查询条件。
    */
   function matchesRepoFilters(item, query, tagTokens, activeGroupIds) {
-    if (query && !item.fullName.toLowerCase().includes(query)) {
+    const groupPaths = buildGroupPathMap(state.meta?.groups || []);
+    if (!matchesUnifiedRepoQuery(item, query, groupPaths)) {
       return false;
     }
     if (activeGroupIds) {
@@ -243,11 +348,13 @@
     if (!elements.groupTree || !state.meta) {
       return;
     }
+    captureGroupTreeScrollTop();
     elements.groupTree.textContent = "";
     const groups = state.meta.groups || [];
     const groupMap = buildGroupIndex(groups);
+    const groupPaths = buildGroupPathMap(groups);
     const children = getGroupChildren(groups);
-    const query = state.filter.query.trim().toLowerCase();
+    const query = normalizeSearchQuery(state.filter.query);
     const tagTokens = getTagTokens(state.filter.tag);
     const activeGroupIds = state.filter.groupId
       ? new Set(getDescendantGroupIds(groups, state.filter.groupId))
@@ -292,6 +399,27 @@
     const hasQuery = query.length > 0;
     const hasTag = tagTokens.length > 0;
     const hasGroupFilter = Boolean(activeGroupIds);
+
+    if (hasQuery) {
+      const flatMatches = repoItems
+        .filter((item) => matchesUnifiedRepoQuery(item, query, groupPaths))
+        .sort((a, b) => compareRepoItems(a, b, state.filter.sort));
+      if (flatMatches.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "gh-stars-helper-search-empty";
+        empty.textContent = t("searchNoResults", null, "没有匹配的仓库");
+        elements.groupTree.appendChild(empty);
+        restoreGroupTreeScrollTop();
+        return;
+      }
+      flatMatches.forEach((item) => {
+        elements.groupTree.appendChild(
+          renderRepoRow(item, 0, { query, includeGroups: true })
+        );
+      });
+      restoreGroupTreeScrollTop();
+      return;
+    }
 
     if (!hasQuery && !hasTag && !hasGroupFilter) {
       groups.forEach((group) => visibleGroupIds.add(group.id));
@@ -420,7 +548,10 @@
     /**
      * 渲染分组内的仓库条目。
      */
-    function renderRepoRow(item, depth) {
+    function renderRepoRow(item, depth, options) {
+      const config = options && typeof options === "object" ? options : {};
+      const highlightQuery = normalizeSearchQuery(config.query);
+      const includeGroups = Boolean(config.includeGroups);
       const row = document.createElement("div");
       row.className = "gh-stars-helper-tree-repo";
       row.style.paddingLeft = `${depth * treeIndentStep + treeIndentBase}px`;
@@ -437,12 +568,12 @@
       if (owner) {
         const ownerSpan = document.createElement("span");
         ownerSpan.className = "gh-stars-helper-repo-owner";
-        ownerSpan.textContent = `${owner}/`;
+        appendHighlightedText(ownerSpan, `${owner}/`, highlightQuery);
         link.appendChild(ownerSpan);
       }
       const nameSpan = document.createElement("span");
       nameSpan.className = "gh-stars-helper-repo-name";
-      nameSpan.textContent = name || fullName;
+      appendHighlightedText(nameSpan, name || fullName, highlightQuery);
       link.appendChild(nameSpan);
       link.addEventListener("click", () => {
         content.ui.toggleDrawer(false);
@@ -450,20 +581,36 @@
 
       const meta = document.createElement("span");
       meta.className = "gh-stars-helper-tree-repo-meta";
+      const groupLabels = getRepoGroupLabels(item, groupPaths);
       const tags = Array.isArray(item.meta.tags) ? item.meta.tags : [];
       const note = item.meta.note || "";
+      if (includeGroups && groupLabels.length > 0) {
+        const groupsSpan = document.createElement("span");
+        const label = t(
+          "metaLabelGroups",
+          [groupLabels.join(", ")],
+          `分组：${groupLabels.join(", ")}`
+        );
+        appendHighlightedText(groupsSpan, label, highlightQuery);
+        meta.appendChild(groupsSpan);
+      }
       if (tags.length > 0) {
         const tagsSpan = document.createElement("span");
-        tagsSpan.textContent = t(
+        const label = t(
           "metaLabelTags",
           [tags.join(", ")],
           `标签：${tags.join(", ")}`
         );
+        appendHighlightedText(tagsSpan, label, highlightQuery);
         meta.appendChild(tagsSpan);
       }
       if (note) {
         const noteSpan = document.createElement("span");
-        noteSpan.textContent = t("metaLabelNote", [note], `备注：${note}`);
+        appendHighlightedText(
+          noteSpan,
+          t("metaLabelNote", [note], `备注：${note}`),
+          highlightQuery
+        );
         meta.appendChild(noteSpan);
       }
 
@@ -480,7 +627,7 @@
       });
       row.appendChild(indent);
       row.appendChild(link);
-      if (tags.length > 0 || note) {
+      if (includeGroups || tags.length > 0 || note) {
         row.appendChild(meta);
       }
       row.appendChild(editButton);
@@ -566,6 +713,7 @@
     if (!activeGroupIds && ungroupedRepos.length > 0) {
       renderUngrouped(0);
     }
+    restoreGroupTreeScrollTop();
   }
 
   /**
@@ -605,10 +753,18 @@
       const groups = state.meta.groups ? state.meta.groups.slice() : [];
       const entry = createGroupEntry(groups, parentId, name);
       if (!entry) {
-        return;
+        return { ok: false, message: t("errorUpdateFailed", null, "更新失败。") };
       }
       groups.push(entry);
-      content.api.updateGroups(groups);
+      return content.api.updateGroups(groups).then((ok) => (
+        ok
+          ? { ok: true }
+          : { ok: false, message: t("errorUpdateFailed", null, "更新失败。") }
+      ));
+    }, {
+      pendingLabel: t("buttonStateApplying", null, "处理中..."),
+      errorLabel: t("buttonStateApplyFailed", null, "处理失败"),
+      errorMessage: t("errorUpdateFailed", null, "更新失败。")
     });
   }
 
@@ -627,12 +783,20 @@
     content.ui.showInputModal("重命名分组", target.name, (name) => {
       const trimmed = name.trim();
       if (!trimmed) {
-        return;
+        return { ok: false, message: t("errorUpdateFailed", null, "更新失败。") };
       }
       const next = groups.map((group) =>
         group.id === groupId ? { ...group, name: trimmed } : group
       );
-      content.api.updateGroups(next);
+      return content.api.updateGroups(next).then((ok) => (
+        ok
+          ? { ok: true }
+          : { ok: false, message: t("errorUpdateFailed", null, "更新失败。") }
+      ));
+    }, {
+      pendingLabel: t("buttonStateApplying", null, "处理中..."),
+      errorLabel: t("buttonStateApplyFailed", null, "处理失败"),
+      errorMessage: t("errorUpdateFailed", null, "更新失败。")
     });
   }
 

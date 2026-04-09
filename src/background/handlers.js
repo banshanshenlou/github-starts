@@ -2,7 +2,7 @@
   "use strict";
 
   const root = globalThis.GhStarsHelperBackground;
-  const { constants, utils, state, meta, github, sync } = root;
+  const { constants, utils, state, meta, github, sync, debug } = root;
   const { nowIso, addPendingOp, withMetaWriteLock, clone } = utils;
   const shared = (globalThis.GhStarsHelper && globalThis.GhStarsHelper.shared) || {};
   const t = typeof shared.t === "function"
@@ -33,6 +33,36 @@
       return chrome.alarms;
     }
     return null;
+  }
+
+  /**
+   * 从待同步队列里提取最近修改过的仓库名，供冲突提示做轻量摘要。
+   * 这里只暴露最近 3 个 repo_meta 仓库，避免把完整待同步明细下发到内容脚本。
+   */
+  function getRecentPendingRepos(pendingOps) {
+    if (!Array.isArray(pendingOps) || pendingOps.length === 0) {
+      return [];
+    }
+    const recentRepos = [];
+    const seenRepos = new Set();
+    for (let index = pendingOps.length - 1; index >= 0; index -= 1) {
+      const op = pendingOps[index];
+      const repo = op
+        && op.type === "repo_meta"
+        && op.info
+        && typeof op.info.repo === "string"
+        ? op.info.repo.trim()
+        : "";
+      if (!repo || seenRepos.has(repo)) {
+        continue;
+      }
+      seenRepos.add(repo);
+      recentRepos.push(repo);
+      if (recentRepos.length >= 3) {
+        break;
+      }
+    }
+    return recentRepos;
   }
 
   /**
@@ -86,6 +116,7 @@
       (async () => {
         if (action === "get_state") {
           const current = await state.getState();
+          const recentPendingRepos = getRecentPendingRepos(current.pendingOps);
           // 配置只暴露必要字段，避免在内容脚本侧泄露敏感信息。
           sendResponse({
             ok: true,
@@ -93,11 +124,13 @@
               config: {
                 hasPat: Boolean(current.config.pat),
                 gistId: current.config.gistId,
-                gistFile: current.config.gistFile
+                gistFile: current.config.gistFile,
+                debugLogging: Boolean(current.config.debugLogging)
               },
               meta: current.meta,
               stars: current.stars,
               pendingOpsCount: current.pendingOps.length,
+              recentPendingRepos,
               syncStatus: current.syncStatus,
               conflict: current.conflict || null
             }
@@ -119,6 +152,16 @@
             ...config
           };
           await state.saveState({ config: next });
+          await debug.appendLog({
+            side: "background",
+            event: "config.saved",
+            data: {
+              hasPat: Boolean(next.pat),
+              gistId: Boolean(next.gistId),
+              gistFile: next.gistFile,
+              debugLogging: Boolean(next.debugLogging)
+            }
+          });
           sendResponse({ ok: true });
           return;
         }
@@ -163,14 +206,54 @@
         if (action === "sync_now") {
           // 同步走统一流程，由后台决定冲突与重试策略。
           const source = message && message.source ? message.source : "manual";
+          await debug.appendLog({
+            side: "background",
+            event: "sync_now.request",
+            data: { source }
+          });
           const result = await sync.syncNowInternal(source);
+          await debug.appendLog({
+            side: "background",
+            event: "sync_now.result",
+            data: {
+              source,
+              ok: Boolean(result && result.ok),
+              conflict: Boolean(result && result.conflict),
+              error: result && result.error ? result.error : ""
+            }
+          });
           sendResponse(result);
           return;
         }
 
         if (action === "sync_meta") {
           // 轻量拉取只检查远端 meta / revision，不拉星标列表也不主动上推本地改动。
+          await debug.appendLog({
+            side: "background",
+            event: "sync_meta.request"
+          });
           const result = await sync.syncMetaInternal();
+          await debug.appendLog({
+            side: "background",
+            event: "sync_meta.result",
+            data: {
+              ok: Boolean(result && result.ok),
+              conflict: Boolean(result && result.conflict),
+              error: result && result.error ? result.error : ""
+            }
+          });
+          sendResponse(result);
+          return;
+        }
+
+        if (action === "append_debug_log") {
+          const result = await debug.appendLog(message.entry || {});
+          sendResponse(result);
+          return;
+        }
+
+        if (action === "get_debug_logs") {
+          const result = await debug.getLogs();
           sendResponse(result);
           return;
         }
@@ -184,6 +267,16 @@
 
         if (action === "update_repo_meta") {
           // 元数据写入必须串行化，避免与同步/其它写入相互覆盖。
+          await debug.appendLog({
+            side: "background",
+            event: "repo_meta.update.request",
+            data: {
+              repoFullName: message.repoFullName || "",
+              groupCount: Array.isArray(message.groupIds) ? message.groupIds.length : 0,
+              tagCount: Array.isArray(message.tags) ? message.tags.length : 0,
+              noteLength: typeof message.note === "string" ? message.note.length : 0
+            }
+          });
           const result = await withMetaWriteLock(async () => {
             const current = await state.getState();
             const repoFullName = message.repoFullName;
@@ -218,8 +311,19 @@
             return {
               ok: true,
               meta: nextMeta,
-              pendingOpsCount: pendingOps.length
+              pendingOpsCount: pendingOps.length,
+              recentPendingRepos: getRecentPendingRepos(pendingOps)
             };
+          });
+          await debug.appendLog({
+            side: "background",
+            event: "repo_meta.update.result",
+            data: {
+              repoFullName: message.repoFullName || "",
+              ok: Boolean(result && result.ok),
+              pendingOpsCount: result && result.pendingOpsCount ? result.pendingOpsCount : 0,
+              error: result && result.error ? result.error : ""
+            }
           });
           sendResponse(result);
           return;
@@ -276,6 +380,15 @@
             nextStars.force_fetch = true;
           }
           await state.saveState({ stars: nextStars });
+          await debug.appendLog({
+            side: "background",
+            event: "star_cache.updated",
+            data: {
+              repoFullName,
+              starred: Boolean(message.starred),
+              starsCount: Object.keys(nextStars.items || {}).length
+            }
+          });
           sendResponse({ ok: true, stars: nextStars });
           return;
         }

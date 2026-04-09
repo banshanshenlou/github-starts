@@ -5,6 +5,7 @@ import "../background/utils.js";
 import "../background/meta.js";
 import "../background/github.js";
 import "../background/state.js";
+import "../background/debug.js";
 import "../background/sync.js";
 import "../background/handlers.js";
 

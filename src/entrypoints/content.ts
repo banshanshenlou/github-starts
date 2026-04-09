@@ -7,6 +7,7 @@ import "../content/utils.js";
 import "../content/icon-anim.js";
 import "../content/storage.js";
 import "../content/api.js";
+import "../content/debug.js";
 import "../content/groups.js";
 import "../content/repo.js";
 import "../content/page.js";

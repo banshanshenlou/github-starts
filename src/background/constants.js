@@ -14,12 +14,14 @@
       pendingOps: "pendingOps",
       stars: "stars",
       syncStatus: "syncStatus",
-      conflict: "conflict"
+      conflict: "conflict",
+      debugLogs: "debugLogs"
     },
     DEFAULT_CONFIG: {
       pat: "",
       gistId: "",
-      gistFile: defaultGistFile
+      gistFile: defaultGistFile,
+      debugLogging: false
     },
     DEFAULT_META: {
       schema_version: 1,
@@ -44,6 +46,7 @@
       RETRY: "stars-helper-retry",
       AUTO_SYNC: "stars-helper-auto-sync"
     },
+    MAX_DEBUG_LOGS: 400,
     MAX_PENDING_OPS: 200,
     STARS_SYNC_INTERVAL_MINUTES: 30,
     MAX_GROUP_DEPTH: maxGroupDepth

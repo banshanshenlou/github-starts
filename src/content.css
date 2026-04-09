@@ -377,6 +377,61 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
   cursor: not-allowed;
 }
 
+.gh-stars-helper-async-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.gh-stars-helper-sync.gh-stars-helper-async-button:not(.is-pending):not(.is-success):not(.is-error),
+.gh-stars-helper-modal-actions button.gh-stars-helper-async-button:not(.is-pending):not(.is-success):not(.is-error) {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-default);
+}
+
+.gh-stars-helper-sync.gh-stars-helper-async-button:not(.is-pending):not(.is-success):not(.is-error):hover,
+.gh-stars-helper-modal-actions button.gh-stars-helper-async-button:not(.is-pending):not(.is-success):not(.is-error):hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-emphasis);
+}
+
+.gh-stars-helper-async-button.is-pending,
+.gh-stars-helper-async-button.is-pending:hover {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-emphasis);
+  cursor: wait;
+  box-shadow: var(--shadow-sm);
+}
+
+.gh-stars-helper-async-button.is-pending::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+.gh-stars-helper-async-button.is-success,
+.gh-stars-helper-async-button.is-success:hover {
+  background: #1a7f37;
+  color: #fff;
+  border-color: #1a7f37;
+}
+
+.gh-stars-helper-async-button.is-error,
+.gh-stars-helper-async-button.is-error:hover {
+  background: #cf222e;
+  color: #fff;
+  border-color: #cf222e;
+}
+
 .gh-stars-helper-status-text.syncing::before {
   content: "";
   display: inline-block;
@@ -494,7 +549,7 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
   display: grid;
   gap: var(--space-3);
   border-bottom: 1px solid var(--color-border-default);
-  grid-template-columns: minmax(220px, 2fr) minmax(180px, 1.2fr) minmax(160px, 220px);
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 220px);
   align-items: center;
 }
 
@@ -541,6 +596,22 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
   box-sizing: border-box;
 }
 
+.gh-stars-helper-search-empty {
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border-default);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  background: var(--color-bg-secondary);
+}
+
+.gh-stars-helper-highlight {
+  background: rgba(255, 212, 59, 0.3);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
 /* 分组标题 */
 .gh-stars-helper-section-header {
   display: flex;
@@ -550,6 +621,12 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
   font-weight: var(--font-weight-semibold);
   margin-bottom: var(--space-3);
   color: var(--color-text-primary);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--color-bg-primary);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border-muted);
 }
 
 .gh-stars-helper-section-actions {
@@ -1098,8 +1175,10 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
 /* 模态框操作按钮 */
 .gh-stars-helper-modal-actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: var(--space-3);
+  flex-wrap: nowrap;
 }
 
 .gh-stars-helper-settings-actions {
@@ -1148,6 +1227,89 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
 .gh-stars-helper-modal-actions button:first-child:active,
 .gh-stars-helper-modal-confirm:active {
   background: var(--color-accent-primary-active);
+}
+
+.gh-stars-helper-modal-actions button.gh-stars-helper-async-button.is-pending:active,
+.gh-stars-helper-modal-actions button.gh-stars-helper-async-button.is-success:active,
+.gh-stars-helper-modal-actions button.gh-stars-helper-async-button.is-error:active,
+.gh-stars-helper-sync.gh-stars-helper-async-button.is-pending:active,
+.gh-stars-helper-sync.gh-stars-helper-async-button.is-success:active,
+.gh-stars-helper-sync.gh-stars-helper-async-button.is-error:active {
+  transform: none;
+}
+
+.gh-stars-helper-toast {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  transform: translateY(16px);
+  width: min(360px, calc(100vw - 24px));
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-default);
+  border-left-width: 4px;
+  background: var(--color-bg-primary);
+  box-shadow: 0 8px 24px rgba(27, 31, 36, 0.12);
+  z-index: calc(var(--z-modal) + 1);
+  opacity: 0;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-base);
+  color: var(--color-text-primary);
+  pointer-events: none;
+}
+
+.gh-stars-helper-toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.gh-stars-helper-toast-success {
+  border-color: #1a7f37;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+.gh-stars-helper-toast-error {
+  border-color: #cf222e;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+.gh-stars-helper-modal-message {
+  min-height: 20px;
+  margin-right: auto;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-base);
+  color: var(--color-text-secondary);
+  text-align: left;
+}
+
+.gh-stars-helper-modal-message[data-state="pending"] {
+  color: var(--color-text-secondary);
+}
+
+.gh-stars-helper-modal-message[data-state="success"] {
+  color: #1a7f37;
+}
+
+.gh-stars-helper-modal-message[data-state="error"] {
+  color: #cf222e;
+}
+
+@media (max-width: 720px) {
+  .gh-stars-helper-toast {
+    left: 12px;
+    right: 12px;
+    bottom: 16px;
+    width: auto;
+  }
 }
 
 /* 分组计数 */
@@ -1374,6 +1536,36 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
   border-color: var(--button-default-borderColor-hover, var(--color-border-emphasis));
 }
 
+.gh-stars-helper-repo-inline-edit.is-pending,
+.gh-stars-helper-repo-inline-edit.is-pending:hover {
+  cursor: wait;
+  border-color: var(--color-border-emphasis);
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
+
+.gh-stars-helper-repo-inline-edit.is-pending .gh-stars-helper-settings-icon {
+  display: none;
+}
+
+.gh-stars-helper-repo-inline-edit.is-pending::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.gh-stars-helper-repo-inline-edit.is-error,
+.gh-stars-helper-repo-inline-edit.is-error:hover {
+  background: #ffebe9;
+  color: #a40e26;
+  border-color: #cf222e;
+}
+
 @media (max-width: 960px) {
   .gh-stars-helper-repo-action-host {
     display: inline-flex;
@@ -1410,7 +1602,7 @@ html[data-color-mode="dark"] .gh-stars-helper-settings-icon-image {
   }
 
   .gh-stars-helper-filters {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(112px, 132px);
     gap: var(--space-2);
   }
 
@@ -1477,8 +1669,15 @@ html[data-color-mode="dark"] .gh-stars-helper-settings-icon-image {
     justify-content: flex-end;
   }
 
+  .gh-stars-helper-filters .gh-stars-helper-input-wrap,
   .gh-stars-helper-filters .gh-stars-helper-sort {
-    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .gh-stars-helper-filters .gh-stars-helper-sort {
+    font-size: 12px;
+    padding-left: var(--space-2);
+    padding-right: 28px;
   }
 
   .gh-stars-helper-group-actions button,
@@ -1520,7 +1719,7 @@ html[data-color-mode="dark"] .gh-stars-helper-settings-icon-image {
 
   .gh-stars-helper-modal-actions {
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: flex-end;
   }
 
@@ -1529,7 +1728,13 @@ html[data-color-mode="dark"] .gh-stars-helper-settings-icon-image {
   }
 
   .gh-stars-helper-filters {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(104px, 124px);
+    gap: 6px;
+  }
+
+  .gh-stars-helper-filters input,
+  .gh-stars-helper-filters select {
+    font-size: 12px;
   }
 }
 

@@ -88,7 +88,8 @@
       constants.STORAGE_KEYS.pendingOps,
       constants.STORAGE_KEYS.stars,
       constants.STORAGE_KEYS.syncStatus,
-      constants.STORAGE_KEYS.conflict
+      constants.STORAGE_KEYS.conflict,
+      constants.STORAGE_KEYS.debugLogs
     ]);
     const config = data.config
       ? { ...constants.DEFAULT_CONFIG, ...data.config }
@@ -100,7 +101,8 @@
       : clone(constants.DEFAULT_STARS);
     const syncStatus = data.syncStatus || clone(constants.DEFAULT_SYNC_STATUS);
     const conflict = data.conflict || null;
-    return { config, meta, pendingOps, stars, syncStatus, conflict };
+    const debugLogs = Array.isArray(data.debugLogs) ? data.debugLogs : [];
+    return { config, meta, pendingOps, stars, syncStatus, conflict, debugLogs };
   }
 
   /**

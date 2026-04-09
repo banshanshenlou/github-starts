@@ -46,8 +46,62 @@
     return JSON.stringify({
       groups: groupLabels,
       tags,
-      note
+      note,
+      query: String(state.filter.query || "").trim().toLowerCase()
     });
+  }
+
+  /**
+   * 统一归一化搜索词，避免不同渲染路径的大小写和空白处理不一致。
+   */
+  function normalizeSearchQuery(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
+  /**
+   * 将命中的文本片段包装为高亮标记，其余部分保持纯文本。
+   */
+  function appendHighlightedText(container, text, query) {
+    const source = String(text || "");
+    const normalizedQuery = normalizeSearchQuery(query);
+    if (!normalizedQuery) {
+      container.textContent = source;
+      return;
+    }
+    const lower = source.toLowerCase();
+    let cursor = 0;
+    while (cursor < source.length) {
+      const index = lower.indexOf(normalizedQuery, cursor);
+      if (index === -1) {
+        container.appendChild(document.createTextNode(source.slice(cursor)));
+        break;
+      }
+      if (index > cursor) {
+        container.appendChild(document.createTextNode(source.slice(cursor, index)));
+      }
+      const mark = document.createElement("mark");
+      mark.className = "gh-stars-helper-highlight";
+      mark.textContent = source.slice(index, index + normalizedQuery.length);
+      container.appendChild(mark);
+      cursor = index + normalizedQuery.length;
+    }
+  }
+
+  /**
+   * 判断仓库是否命中统一搜索词：仓库名、备注、分组路径任一命中即可。
+   */
+  function matchesUnifiedQuery(repoFullName, meta, groupLabels, query) {
+    if (!query) {
+      return true;
+    }
+    if (repoFullName.toLowerCase().includes(query)) {
+      return true;
+    }
+    const note = String(meta.note || "").toLowerCase();
+    if (note.includes(query)) {
+      return true;
+    }
+    return groupLabels.some((label) => label.toLowerCase().includes(query));
   }
 
   /**
@@ -69,6 +123,7 @@
     const tags = Array.isArray(meta.tags) ? meta.tags : [];
     const note = meta.note || "";
     const groupLabels = groups.map((id) => groupPaths[id]).filter(Boolean);
+    const query = normalizeSearchQuery(state.filter.query);
     const metaKey = buildMetaKey(groupLabels, tags, note);
 
     if (
@@ -84,25 +139,37 @@
 
     if (groups.length > 0) {
       const span = document.createElement("span");
-      span.textContent = t(
-        "metaLabelGroups",
-        [groupLabels.join(", ")],
-        `分组：${groupLabels.join(", ")}`
+      appendHighlightedText(
+        span,
+        t(
+          "metaLabelGroups",
+          [groupLabels.join(", ")],
+          `分组：${groupLabels.join(", ")}`
+        ),
+        query
       );
       container.appendChild(span);
     }
     if (tags.length > 0) {
       const span = document.createElement("span");
-      span.textContent = t(
-        "metaLabelTags",
-        [tags.join(", ")],
-        `标签：${tags.join(", ")}`
+      appendHighlightedText(
+        span,
+        t(
+          "metaLabelTags",
+          [tags.join(", ")],
+          `标签：${tags.join(", ")}`
+        ),
+        query
       );
       container.appendChild(span);
     }
     if (note) {
       const span = document.createElement("span");
-      span.textContent = t("metaLabelNote", [note], `备注：${note}`);
+      appendHighlightedText(
+        span,
+        t("metaLabelNote", [note], `备注：${note}`),
+        query
+      );
       container.appendChild(span);
     }
 
@@ -124,19 +191,21 @@
       return;
     }
     let visible = true;
+    const meta = (state.meta.repo_meta || {})[repoFullName] || {};
+    const groupPaths = content.groups.buildGroupPathMap(state.meta.groups || []);
+    const groupIds = Array.isArray(meta.group_ids) ? meta.group_ids : [];
+    const groupLabels = groupIds.map((id) => groupPaths[id]).filter(Boolean);
+    const query = normalizeSearchQuery(state.filter.query);
     if (state.filter.query) {
-      visible = repoFullName.toLowerCase().includes(state.filter.query.toLowerCase());
+      visible = matchesUnifiedQuery(repoFullName, meta, groupLabels, query);
     }
     if (visible && state.filter.groupId) {
-      const meta = (state.meta.repo_meta || {})[repoFullName] || {};
-      const groups = Array.isArray(meta.group_ids) ? meta.group_ids : [];
       const descendants = content.groups.getDescendantGroupIds(state.meta.groups || [], state.filter.groupId);
-      if (!groups.some((id) => descendants.includes(id))) {
+      if (!groupIds.some((id) => descendants.includes(id))) {
         visible = false;
       }
     }
     if (visible && state.filter.tag) {
-      const meta = (state.meta.repo_meta || {})[repoFullName] || {};
       const tags = Array.isArray(meta.tags) ? meta.tags.map((tag) => tag.toLowerCase()) : [];
       const tokens = content.groups.getTagTokens(state.filter.tag);
       if (tokens.length > 0 && !tokens.every((token) => tags.includes(token))) {

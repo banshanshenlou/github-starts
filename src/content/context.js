@@ -20,6 +20,7 @@
     meta: null,
     stars: { items: {}, updated_at: null, fetched_at: null, etag: null, force_fetch: false },
     pendingOpsCount: 0,
+    recentPendingRepos: [],
     syncStatus: { state: "idle", message: "", updated_at: null },
     conflict: null,
     filter: {
@@ -49,6 +50,7 @@
     conflictDesc: null,
     conflictLocalLine: null,
     conflictCloudLine: null,
+    conflictRecentRepos: null,
     conflictHint: null,
     conflictKeepRemote: null,
     conflictKeepLocal: null,
@@ -56,6 +58,8 @@
     searchInput: null,
     tagInput: null,
     sortSelect: null,
+    sectionTitle: null,
+    sectionActions: null,
     groupTree: null,
     repoEditButton: null
   };
@@ -75,8 +79,13 @@
     lastRepoAutoOpenIntentTime: 0,
     lastStarToggleIntentKey: "",
     lastStarToggleIntentTime: 0,
+    pendingStarStateRepo: "",
+    pendingStarStateExpected: null,
+    pendingStarStateExpiresAt: 0,
     lastMetaSyncCheckAt: 0,
     escHandlerAttached: false,
-    repoAutoSyncTimer: null
+    repoAutoSyncTimer: null,
+    toastTimer: null,
+    groupTreeScrollTop: 0
   };
 })();

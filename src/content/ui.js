@@ -8,6 +8,10 @@
   const MANAGE_BUTTON_LOGO_LIGHT_SRC = "assets/branding/logo.png";
   const MANAGE_BUTTON_LOGO_DARK_SRC = "assets/branding/logo-dark.png";
   const DRAWER_OPEN_META_SYNC_INTERVAL_MS = 15000;
+  const SETTINGS_LOG_EXPORT_PREFIX = "github-stars-debug";
+  const ASYNC_BUTTON_SUCCESS_RESET_MS = 1500;
+  const TOAST_AUTO_CLOSE_MS = 2200;
+  const buttonResetTimers = new WeakMap();
   const t = typeof shared.t === "function"
     ? shared.t
     : (key, substitutions, fallback) => fallback || key;
@@ -112,7 +116,17 @@
   function ensureManageButton() {
     ensureEscHandler();
     if (elements.manageButton) {
-      return;
+      if (!elements.manageButton.isConnected) {
+        // BFCache / 页面切换后节点可能已脱离文档，需要丢弃旧引用后重建。
+        elements.manageButton = null;
+      } else {
+        if (content.debug) {
+          content.debug.log("manage_button.ensure.skip", {
+            isConnected: Boolean(elements.manageButton.isConnected)
+          });
+        }
+        return;
+      }
     }
     if (!document.body) {
       return;
@@ -145,12 +159,22 @@
     button.appendChild(logoDark);
     button.appendChild(srOnlyText);
     button.addEventListener("click", () => {
+      if (content.debug) {
+        content.debug.log("manage_button.click", {
+          suppressManageButtonClick: Boolean(runtime.suppressManageButtonClick)
+        });
+      }
       if (runtime.suppressManageButtonClick) {
         return;
       }
       toggleDrawer(true);
     });
     document.body.appendChild(button);
+    if (content.debug) {
+      content.debug.log("manage_button.created", {
+        bodyReady: Boolean(document.body)
+      });
+    }
     // 首次注入时闪烁两下，提示悬浮按钮入口。
     window.requestAnimationFrame(() => {
       button.classList.add("attention");
@@ -212,6 +236,137 @@
   }
 
   /**
+   * 清理按钮的自动恢复定时器，避免旧状态覆盖最新交互结果。
+   */
+  function clearAsyncButtonResetTimer(button) {
+    const timer = buttonResetTimers.get(button);
+    if (timer) {
+      window.clearTimeout(timer);
+      buttonResetTimers.delete(button);
+    }
+  }
+
+  /**
+   * 为异步按钮登记默认文案，统一后续状态切换的视觉基线。
+   */
+  function prepareAsyncButton(button, idleLabel) {
+    if (!button) {
+      return;
+    }
+    button.classList.add("gh-stars-helper-async-button");
+    if (!button.dataset.ghStarsHelperIdleLabel) {
+      const label = typeof idleLabel === "string" && idleLabel
+        ? idleLabel
+        : String(button.textContent || "").trim();
+      button.dataset.ghStarsHelperIdleLabel = label;
+    }
+    if (!button.dataset.ghStarsHelperAsyncState) {
+      button.dataset.ghStarsHelperAsyncState = "idle";
+    }
+  }
+
+  /**
+   * 获取当前按钮视觉状态，便于渲染链路避免错误覆盖短暂成功/失败态。
+   */
+  function getAsyncButtonState(button) {
+    if (!button) {
+      return "idle";
+    }
+    return button.dataset.ghStarsHelperAsyncState || "idle";
+  }
+
+  /**
+   * 统一切换异步按钮状态：默认、加载、成功、失败。
+   */
+  function setAsyncButtonState(button, options) {
+    if (!button) {
+      return;
+    }
+    const config = options && typeof options === "object" ? options : {};
+    const nextState = config.state || "idle";
+    prepareAsyncButton(button, config.idleLabel);
+    clearAsyncButtonResetTimer(button);
+    button.classList.remove("is-pending", "is-success", "is-error");
+    button.dataset.ghStarsHelperAsyncState = nextState;
+    if (nextState === "pending") {
+      button.classList.add("is-pending");
+    } else if (nextState === "success") {
+      button.classList.add("is-success");
+    } else if (nextState === "error") {
+      button.classList.add("is-error");
+    }
+    const label = typeof config.label === "string" && config.label
+      ? config.label
+      : (button.dataset.ghStarsHelperIdleLabel || String(button.textContent || "").trim());
+    button.textContent = label;
+    button.disabled = nextState === "pending" ? true : Boolean(config.disabled);
+    button.setAttribute("aria-busy", nextState === "pending" ? "true" : "false");
+    if (nextState === "success") {
+      const resetMs = Number.isFinite(config.autoResetMs)
+        ? config.autoResetMs
+        : ASYNC_BUTTON_SUCCESS_RESET_MS;
+      if (resetMs > 0) {
+        const timer = window.setTimeout(() => {
+          buttonResetTimers.delete(button);
+          resetAsyncButtonState(button);
+        }, resetMs);
+        buttonResetTimers.set(button, timer);
+      }
+    }
+  }
+
+  /**
+   * 将异步按钮恢复为初始白色态，失败态会在下一次点击前由调用方主动重置。
+   */
+  function resetAsyncButtonState(button) {
+    if (!button) {
+      return;
+    }
+    setAsyncButtonState(button, {
+      state: "idle",
+      label: button.dataset.ghStarsHelperIdleLabel || String(button.textContent || "").trim(),
+      autoResetMs: 0
+    });
+  }
+
+  /**
+   * 展示页面级轻提示，用于“按钮已关闭/弹窗已销毁”后的结果反馈。
+   */
+  function showToast(message, options) {
+    if (!message || !document.body) {
+      return;
+    }
+    const config = options && typeof options === "object" ? options : {};
+    const variant = config.variant === "error" ? "error" : "success";
+    const existing = document.querySelector(".gh-stars-helper-toast");
+    if (existing) {
+      existing.remove();
+    }
+    if (runtime.toastTimer) {
+      window.clearTimeout(runtime.toastTimer);
+      runtime.toastTimer = null;
+    }
+    const toast = document.createElement("div");
+    toast.className = `gh-stars-helper-toast gh-stars-helper-toast-${variant}`;
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    window.requestAnimationFrame(() => {
+      toast.classList.add("visible");
+    });
+    runtime.toastTimer = window.setTimeout(() => {
+      toast.classList.remove("visible");
+      window.setTimeout(() => {
+        if (toast.isConnected) {
+          toast.remove();
+        }
+      }, 180);
+      runtime.toastTimer = null;
+    }, Number.isFinite(config.durationMs) ? config.durationMs : TOAST_AUTO_CLOSE_MS);
+  }
+
+  /**
    * 查找分组树最近的可滚动容器，兼容抽屉主体与未来嵌套布局。
    */
   function getGroupTreeScrollContainer() {
@@ -248,11 +403,55 @@
   }
 
   /**
+   * 清理抽屉相关节点引用，供页面恢复后重新注入使用。
+   */
+  function resetDrawerElements() {
+    elements.overlay = null;
+    elements.drawer = null;
+    elements.starsCount = null;
+    elements.groupsCount = null;
+    elements.statusText = null;
+    elements.pendingText = null;
+    elements.syncButton = null;
+    elements.optionsButton = null;
+    elements.helpButton = null;
+    elements.optionsHint = null;
+    elements.optionsMessage = null;
+    elements.optionsLink = null;
+    elements.conflictBox = null;
+    elements.conflictDesc = null;
+    elements.conflictLocalLine = null;
+    elements.conflictCloudLine = null;
+    elements.conflictRecentRepos = null;
+    elements.conflictHint = null;
+    elements.conflictKeepRemote = null;
+    elements.conflictKeepLocal = null;
+    elements.conflictOpenGist = null;
+    elements.searchInput = null;
+    elements.tagInput = null;
+    elements.sortSelect = null;
+    elements.sectionTitle = null;
+    elements.sectionActions = null;
+    elements.groupTree = null;
+  }
+
+  /**
    * 创建抽屉与遮罩结构，并绑定交互事件。
    */
   function ensureDrawer() {
     if (elements.drawer) {
-      return;
+      const drawerConnected = Boolean(elements.drawer.isConnected);
+      const overlayConnected = Boolean(elements.overlay && elements.overlay.isConnected);
+      if (!drawerConnected || !overlayConnected) {
+        resetDrawerElements();
+      } else {
+        if (content.debug) {
+          content.debug.log("drawer.ensure.skip", {
+            isConnected: drawerConnected
+          });
+        }
+        return;
+      }
     }
     const overlay = document.createElement("div");
     overlay.id = "gh-stars-helper-overlay";
@@ -302,6 +501,7 @@
           <div class="gh-stars-helper-conflict-meta">
             <div class="gh-stars-helper-conflict-local-line"></div>
             <div class="gh-stars-helper-conflict-cloud-line"></div>
+            <div class="gh-stars-helper-conflict-recent-repos"></div>
           </div>
           <div class="gh-stars-helper-conflict-hint"></div>
           <div class="gh-stars-helper-conflict-actions">
@@ -313,12 +513,8 @@
       </div>
       <div class="gh-stars-helper-filters">
         <div class="gh-stars-helper-input-wrap">
-          <input class="gh-stars-helper-search" type="search" placeholder="${t("placeholderSearch", null, "搜索分组或仓库")}" />
+          <input class="gh-stars-helper-search" type="search" placeholder="${t("placeholderSearchUnified", null, "搜索仓库、分组或备注")}" />
           <button class="gh-stars-helper-input-clear gh-stars-helper-search-clear" type="button" aria-label="${t("ariaClearSearch", null, "清空搜索")}">×</button>
-        </div>
-        <div class="gh-stars-helper-input-wrap">
-          <input class="gh-stars-helper-tags" type="text" placeholder="${t("placeholderTags", null, "筛选标签（逗号分隔）")}" />
-          <button class="gh-stars-helper-input-clear gh-stars-helper-tags-clear" type="button" aria-label="${t("ariaClearTags", null, "清空标签")}">×</button>
         </div>
         <select class="gh-stars-helper-sort">
           <option value="starred_desc">${t("sortStarredDesc", null, "星标时间（新到旧）")}</option>
@@ -332,7 +528,7 @@
       <div class="gh-stars-helper-body">
         <div class="gh-stars-helper-groups">
           <div class="gh-stars-helper-section-header">
-            <span>${t("sectionGroups", null, "分组")}</span>
+            <span class="gh-stars-helper-section-title">${t("sectionGroups", null, "分组")}</span>
             <div class="gh-stars-helper-section-actions">
               <div class="gh-stars-helper-tree-quick-actions">
                 <button
@@ -374,6 +570,9 @@
 
     document.body.appendChild(overlay);
     document.body.appendChild(drawer);
+    if (content.debug) {
+      content.debug.log("drawer.created");
+    }
 
     elements.overlay = overlay;
     elements.drawer = drawer;
@@ -391,21 +590,24 @@
     elements.conflictDesc = drawer.querySelector(".gh-stars-helper-conflict-desc");
     elements.conflictLocalLine = drawer.querySelector(".gh-stars-helper-conflict-local-line");
     elements.conflictCloudLine = drawer.querySelector(".gh-stars-helper-conflict-cloud-line");
+    elements.conflictRecentRepos = drawer.querySelector(".gh-stars-helper-conflict-recent-repos");
     elements.conflictHint = drawer.querySelector(".gh-stars-helper-conflict-hint");
     elements.conflictKeepRemote = drawer.querySelector(".gh-stars-helper-conflict-remote");
     elements.conflictKeepLocal = drawer.querySelector(".gh-stars-helper-conflict-local");
     elements.conflictOpenGist = drawer.querySelector(".gh-stars-helper-conflict-open");
     elements.searchInput = drawer.querySelector(".gh-stars-helper-search");
-    elements.tagInput = drawer.querySelector(".gh-stars-helper-tags");
     elements.sortSelect = drawer.querySelector(".gh-stars-helper-sort");
+    elements.sectionTitle = drawer.querySelector(".gh-stars-helper-section-title");
+    elements.sectionActions = drawer.querySelector(".gh-stars-helper-section-actions");
     elements.groupTree = drawer.querySelector(".gh-stars-helper-group-tree");
     const searchClear = drawer.querySelector(".gh-stars-helper-search-clear");
-    const tagsClear = drawer.querySelector(".gh-stars-helper-tags-clear");
     const addGroupButton = drawer.querySelector(".gh-stars-helper-add-group");
     const treeQuickTopButton = drawer.querySelector(".gh-stars-helper-tree-quick-top");
     const treeQuickBottomButton = drawer.querySelector(".gh-stars-helper-tree-quick-bottom");
     const treeQuickExpandButton = drawer.querySelector(".gh-stars-helper-tree-quick-expand");
     const treeQuickCollapseButton = drawer.querySelector(".gh-stars-helper-tree-quick-collapse");
+
+    prepareAsyncButton(elements.syncButton, t("btnSync", null, "同步"));
 
     overlay.addEventListener("click", () => toggleDrawer(false));
     drawer.querySelector(".gh-stars-helper-close").addEventListener("click", () => toggleDrawer(false));
@@ -414,12 +616,42 @@
     elements.helpButton.addEventListener("click", () => openHelpModal());
     if (elements.conflictKeepRemote) {
       elements.conflictKeepRemote.addEventListener("click", async () => {
-        await content.api.resolveConflictDecision("keep_remote");
+        prepareAsyncButton(elements.conflictKeepRemote, t("conflictKeepRemote", null, "使用云端版本"));
+        setAsyncButtonState(elements.conflictKeepRemote, {
+          state: "pending",
+          label: t("buttonStateApplying", null, "处理中...")
+        });
+        const ok = await content.api.resolveConflictDecision("keep_remote");
+        if (!ok) {
+          setAsyncButtonState(elements.conflictKeepRemote, {
+            state: "error",
+            label: t("buttonStateApplyFailed", null, "处理失败")
+          });
+          return;
+        }
+        showToast(t("statusAppliedRemote", null, "已应用远端版本"), {
+          variant: "success"
+        });
       });
     }
     if (elements.conflictKeepLocal) {
       elements.conflictKeepLocal.addEventListener("click", async () => {
-        await content.api.resolveConflictDecision("keep_local");
+        prepareAsyncButton(elements.conflictKeepLocal, t("conflictKeepLocal", null, "保留本机修改"));
+        setAsyncButtonState(elements.conflictKeepLocal, {
+          state: "pending",
+          label: t("buttonStateApplying", null, "处理中...")
+        });
+        const ok = await content.api.resolveConflictDecision("keep_local");
+        if (!ok) {
+          setAsyncButtonState(elements.conflictKeepLocal, {
+            state: "error",
+            label: t("buttonStateApplyFailed", null, "处理失败")
+          });
+          return;
+        }
+        showToast(t("statusAppliedLocal", null, "已应用本地版本"), {
+          variant: "success"
+        });
       });
     }
     if (elements.conflictOpenGist) {
@@ -427,14 +659,8 @@
     }
     elements.searchInput.addEventListener("input", (event) => {
       state.filter.query = event.target.value.trim();
-      renderAll();
-    });
-    elements.tagInput.addEventListener("input", (event) => {
-      const normalized = normalizeCommaInput(event.target.value);
-      if (normalized !== event.target.value) {
-        event.target.value = normalized;
-      }
-      state.filter.tag = event.target.value.trim();
+      state.filter.tag = "";
+      state.filter.groupId = "";
       renderAll();
     });
     elements.sortSelect.addEventListener("change", (event) => {
@@ -442,7 +668,6 @@
       renderAll();
     });
     bindInputClear(elements.searchInput, searchClear);
-    bindInputClear(elements.tagInput, tagsClear);
     if (treeQuickTopButton) {
       treeQuickTopButton.addEventListener("click", () => scrollGroupTreeToBoundary("top"));
     }
@@ -475,6 +700,13 @@
     elements.overlay.classList.toggle("open", shouldOpen);
     if (elements.manageButton) {
       elements.manageButton.classList.toggle("hidden", shouldOpen);
+    }
+    if (content.debug) {
+      content.debug.log("drawer.toggle", {
+        shouldOpen,
+        hasManageButton: Boolean(elements.manageButton),
+        manageButtonConnected: Boolean(elements.manageButton && elements.manageButton.isConnected)
+      });
     }
     if (shouldOpen) {
       content.api.refreshState();
@@ -564,10 +796,17 @@
           <label>${t("fieldGistFile", null, "Gist 文件名")}</label>
           <input class="gh-stars-helper-input gh-stars-helper-input-gist-file" type="text" placeholder="${t("placeholderGistFile", null, "stars-metadata.json")}" />
         </div>
+        <div class="gh-stars-helper-field">
+          <label>
+            <input class="gh-stars-helper-input-debug-logging" type="checkbox" />
+            ${t("fieldDebugLogging", null, "启用诊断日志")}
+          </label>
+        </div>
         <div class="gh-stars-helper-modal-actions gh-stars-helper-settings-actions">
           <button class="gh-stars-helper-save" type="button">${t("btnSave", null, "保存")}</button>
           <button class="gh-stars-helper-test" type="button">${t("btnTestToken", null, "测试 Token")}</button>
           <button class="gh-stars-helper-create" type="button">${t("btnCreateGist", null, "创建 Gist")}</button>
+          <button class="gh-stars-helper-export-debug" type="button">${t("btnExportDebugLogs", null, "导出日志")}</button>
           <button class="gh-stars-helper-cancel" type="button">${t("btnClose", null, "关闭")}</button>
         </div>
         <div class="gh-stars-helper-settings-status" role="status"></div>
@@ -578,11 +817,18 @@
     const patInput = overlay.querySelector(".gh-stars-helper-input-pat");
     const gistIdInput = overlay.querySelector(".gh-stars-helper-input-gist-id");
     const gistFileInput = overlay.querySelector(".gh-stars-helper-input-gist-file");
+    const debugLoggingInput = overlay.querySelector(".gh-stars-helper-input-debug-logging");
     const saveButton = overlay.querySelector(".gh-stars-helper-save");
     const testButton = overlay.querySelector(".gh-stars-helper-test");
     const createButton = overlay.querySelector(".gh-stars-helper-create");
+    const exportDebugButton = overlay.querySelector(".gh-stars-helper-export-debug");
     const cancelButton = overlay.querySelector(".gh-stars-helper-cancel");
     const defaultGistFile = shared.DEFAULT_GIST_FILE || "stars-metadata.json";
+
+    prepareAsyncButton(saveButton, t("btnSave", null, "保存"));
+    prepareAsyncButton(testButton, t("btnTestToken", null, "测试 Token"));
+    prepareAsyncButton(createButton, t("btnCreateGist", null, "创建 Gist"));
+    prepareAsyncButton(exportDebugButton, t("btnExportDebugLogs", null, "导出日志"));
 
     // 更新设置弹窗内的状态提示。
     const setLocalStatus = (message, isError) => {
@@ -609,37 +855,71 @@
 
     if (saveButton) {
       saveButton.addEventListener("click", async () => {
+        setAsyncButtonState(saveButton, {
+          state: "pending",
+          label: t("buttonStateSaving", null, "保存中...")
+        });
         const config = {
           pat: patInput.value.trim(),
           gistId: gistIdInput.value.trim(),
-          gistFile: gistFileInput.value.trim() || defaultGistFile
+          gistFile: gistFileInput.value.trim() || defaultGistFile,
+          debugLogging: Boolean(debugLoggingInput && debugLoggingInput.checked)
         };
         const res = await shared.sendMessage("save_config", { config });
         if (!res.ok) {
           setLocalStatus(res.error || t("statusSaveFailed", null, "保存失败。"), true);
+          setAsyncButtonState(saveButton, {
+            state: "error",
+            label: t("buttonStateSaveFailed", null, "保存失败")
+          });
           return;
         }
+        if (content.debug) {
+          content.debug.log("settings.save", {
+            debugLogging: Boolean(config.debugLogging)
+          });
+        }
         setLocalStatus(t("statusSaved", null, "已保存。"));
+        setAsyncButtonState(saveButton, {
+          state: "success",
+          label: t("buttonStateSaved", null, "已保存")
+        });
         content.api.refreshState();
       });
     }
 
     if (testButton) {
       testButton.addEventListener("click", async () => {
+        setAsyncButtonState(testButton, {
+          state: "pending",
+          label: t("buttonStateTestingToken", null, "测试中...")
+        });
         const pat = patInput.value.trim();
         const res = await shared.sendMessage("test_token", { pat });
         if (!res.ok) {
           setLocalStatus(res.error || t("statusTokenTestFailed", null, "Token 测试失败。"), true);
+          setAsyncButtonState(testButton, {
+            state: "error",
+            label: t("buttonStateTokenFailed", null, "测试失败")
+          });
           return;
         }
         setLocalStatus(
           t("statusTokenOk", [res.login || ""], `Token 验证通过：${res.login || ""}`)
         );
+        setAsyncButtonState(testButton, {
+          state: "success",
+          label: t("buttonStateTokenOk", null, "测试通过")
+        });
       });
     }
 
     if (createButton) {
       createButton.addEventListener("click", async () => {
+        setAsyncButtonState(createButton, {
+          state: "pending",
+          label: t("buttonStateCreatingGist", null, "创建中...")
+        });
         const config = {
           pat: patInput.value.trim(),
           gistFile: gistFileInput.value.trim() || defaultGistFile
@@ -647,13 +927,76 @@
         const res = await shared.sendMessage("create_gist", { config });
         if (!res.ok) {
           setLocalStatus(res.error || t("statusCreateGistFailed", null, "创建 Gist 失败。"), true);
+          setAsyncButtonState(createButton, {
+            state: "error",
+            label: t("buttonStateGistFailed", null, "创建失败")
+          });
           return;
         }
         gistIdInput.value = res.gistId;
         setLocalStatus(
           t("statusGistCreated", [res.gistId], `Gist 已创建：${res.gistId}`)
         );
+        setAsyncButtonState(createButton, {
+          state: "success",
+          label: t("buttonStateGistCreated", null, "已创建")
+        });
         content.api.refreshState();
+      });
+    }
+
+    if (exportDebugButton) {
+      exportDebugButton.addEventListener("click", async () => {
+        setAsyncButtonState(exportDebugButton, {
+          state: "pending",
+          label: t("buttonStateExportingDebug", null, "导出中...")
+        });
+        const result = await content.debug.getLogs();
+        if (!result.ok) {
+          setLocalStatus(result.error || t("statusExportDebugFailed", null, "导出日志失败。"), true);
+          setAsyncButtonState(exportDebugButton, {
+            state: "error",
+            label: t("buttonStateExportDebugFailed", null, "导出失败")
+          });
+          return;
+        }
+        const exportedAt = new Date();
+        const timestamp = exportedAt.toISOString().replace(/[:.]/g, "-");
+        const payload = {
+          exportedAt: exportedAt.toISOString(),
+          userAgent: navigator.userAgent,
+          pageUrl: window.location.href,
+          enabled: Boolean(result.enabled),
+          count: Array.isArray(result.logs) ? result.logs.length : 0,
+          logs: Array.isArray(result.logs) ? result.logs : []
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], {
+          type: "application/json;charset=utf-8"
+        });
+        const downloadUrl = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = downloadUrl;
+        anchor.download = `${SETTINGS_LOG_EXPORT_PREFIX}-${timestamp}.json`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(downloadUrl);
+        if (content.debug) {
+          content.debug.log("settings.export_debug", {
+            count: payload.count
+          });
+        }
+        setLocalStatus(
+          t(
+            "statusExportDebugOk",
+            [String(payload.count)],
+            `已导出 ${payload.count} 条日志。`
+          )
+        );
+        setAsyncButtonState(exportDebugButton, {
+          state: "success",
+          label: t("buttonStateExportDebugOk", null, "已导出")
+        });
       });
     }
 
@@ -667,6 +1010,9 @@
       patInput.value = config.pat || "";
       gistIdInput.value = config.gistId || "";
       gistFileInput.value = config.gistFile || defaultGistFile;
+      if (debugLoggingInput) {
+        debugLoggingInput.checked = Boolean(config.debugLogging);
+      }
     })();
   }
 
@@ -764,6 +1110,7 @@
     const remoteMeta = conflict && conflict.remoteMeta && typeof conflict.remoteMeta === "object"
       ? conflict.remoteMeta
       : {};
+    const recentPendingRepos = Array.isArray(state.recentPendingRepos) ? state.recentPendingRepos : [];
     const localRevision = Number.isFinite(state.meta && state.meta.revision) ? String(state.meta.revision) : "-";
     const remoteRevision = Number.isFinite(remoteMeta.revision) ? String(remoteMeta.revision) : "-";
     const pendingCount = Number.isFinite(state.pendingOpsCount) ? String(state.pendingOpsCount) : "0";
@@ -781,6 +1128,13 @@
         [remoteRevision, remoteUpdatedAt],
         `云端：修订 ${remoteRevision}，最近修改 ${remoteUpdatedAt}`
       ),
+      recentReposLine: recentPendingRepos.length > 0
+        ? t(
+          "conflictRecentPendingRepos",
+          [recentPendingRepos.join("、")],
+          `本机最近修改仓库：${recentPendingRepos.join("、")}`
+        )
+        : "",
       hint: Number(pendingCount) > 0
         ? t(
           "conflictHintPending",
@@ -815,6 +1169,10 @@
     }
     if (elements.conflictCloudLine) {
       elements.conflictCloudLine.textContent = summary.cloudLine;
+    }
+    if (elements.conflictRecentRepos) {
+      elements.conflictRecentRepos.textContent = summary.recentReposLine || "";
+      elements.conflictRecentRepos.style.display = summary.recentReposLine ? "" : "none";
     }
     if (elements.conflictHint) {
       elements.conflictHint.textContent = summary.hint;
@@ -851,6 +1209,9 @@
     const cloudLine = document.createElement("p");
     cloudLine.textContent = summary.cloudLine;
 
+    const recentReposLine = document.createElement("p");
+    recentReposLine.textContent = summary.recentReposLine;
+
     const hint = document.createElement("p");
     hint.textContent = summary.hint;
 
@@ -886,6 +1247,9 @@
     modal.appendChild(desc);
     modal.appendChild(localLine);
     modal.appendChild(cloudLine);
+    if (summary.recentReposLine) {
+      modal.appendChild(recentReposLine);
+    }
     modal.appendChild(hint);
     modal.appendChild(actions);
     overlay.appendChild(modal);
@@ -896,13 +1260,44 @@
       overlay.remove();
     };
 
+    prepareAsyncButton(keepRemoteButton, t("conflictKeepRemote", null, "使用云端版本"));
+    prepareAsyncButton(keepLocalButton, t("conflictKeepLocal", null, "保留本机修改"));
+
     cancelButton.addEventListener("click", cleanup);
     keepRemoteButton.addEventListener("click", async () => {
-      await content.api.resolveConflictDecision("keep_remote");
+      setAsyncButtonState(keepRemoteButton, {
+        state: "pending",
+        label: t("buttonStateApplying", null, "处理中...")
+      });
+      const ok = await content.api.resolveConflictDecision("keep_remote");
+      if (!ok) {
+        setAsyncButtonState(keepRemoteButton, {
+          state: "error",
+          label: t("buttonStateApplyFailed", null, "处理失败")
+        });
+        return;
+      }
+      showToast(t("statusAppliedRemote", null, "已应用远端版本"), {
+        variant: "success"
+      });
       cleanup();
     });
     keepLocalButton.addEventListener("click", async () => {
-      await content.api.resolveConflictDecision("keep_local");
+      setAsyncButtonState(keepLocalButton, {
+        state: "pending",
+        label: t("buttonStateApplying", null, "处理中...")
+      });
+      const ok = await content.api.resolveConflictDecision("keep_local");
+      if (!ok) {
+        setAsyncButtonState(keepLocalButton, {
+          state: "error",
+          label: t("buttonStateApplyFailed", null, "处理失败")
+        });
+        return;
+      }
+      showToast(t("statusAppliedLocal", null, "已应用本地版本"), {
+        variant: "success"
+      });
       cleanup();
     });
     openGistButton.addEventListener("click", () => {
@@ -934,20 +1329,27 @@
     if (status.state === "syncing") {
       text = status.message || t("statusSyncing", null, "同步中...");
       if (elements.syncButton) {
-        elements.syncButton.classList.add("syncing");
-        elements.syncButton.disabled = true;
+        setAsyncButtonState(elements.syncButton, {
+          state: "pending",
+          label: t("buttonStateSyncing", null, "同步中...")
+        });
       }
       elements.statusText.classList.add("syncing");
     } else {
-      if (elements.syncButton) {
-        elements.syncButton.classList.remove("syncing");
-        elements.syncButton.disabled = false;
+      if (elements.syncButton && getAsyncButtonState(elements.syncButton) === "pending") {
+        resetAsyncButtonState(elements.syncButton);
       }
       elements.statusText.classList.remove("syncing");
     }
     if (status.state === "error") {
       const errorLabel = t("statusErrorPrefix", null, "错误: ");
       text = `${errorLabel}${status.message || t("errorSyncFailed", null, "同步失败")}`;
+      if (elements.syncButton) {
+        setAsyncButtonState(elements.syncButton, {
+          state: "error",
+          label: t("buttonStateSyncFailed", null, "同步失败")
+        });
+      }
     } else if (status.state === "conflict") {
       text = t("statusConflictPrompt", null, "检测到同步冲突：请在侧边栏选择保留本机或云端。");
     } else if (!state.config || !state.config.hasPat || !state.config.gistId) {
@@ -999,6 +1401,15 @@
    * 执行全量 UI 刷新。
    */
   function renderAll() {
+    const hasSearchQuery = Boolean((state.filter.query || "").trim());
+    if (elements.sectionTitle) {
+      elements.sectionTitle.textContent = hasSearchQuery
+        ? t("sectionResults", null, "结果")
+        : t("sectionGroups", null, "分组");
+    }
+    if (elements.sectionActions) {
+      elements.sectionActions.style.display = hasSearchQuery ? "none" : "";
+    }
     renderStats();
     renderStatus();
     content.groups.renderGroupTree();
@@ -1008,7 +1419,8 @@
   /**
    * 使用 DOM 构建输入弹窗，避免字符串插值引入注入风险。
    */
-  function showInputModal(title, defaultValue, callback) {
+  function showInputModal(title, defaultValue, callback, options) {
+    const config = options && typeof options === "object" ? options : {};
     const inputOverlay = document.createElement("div");
     inputOverlay.className = "gh-stars-helper-modal-overlay";
 
@@ -1042,6 +1454,11 @@
     cancelBtn.className = "gh-stars-helper-modal-cancel";
     cancelBtn.textContent = t("btnCancel", null, "取消");
 
+    const messageEl = document.createElement("div");
+    messageEl.className = "gh-stars-helper-modal-message";
+    messageEl.setAttribute("role", "status");
+    messageEl.setAttribute("aria-live", "polite");
+    actions.appendChild(messageEl);
     actions.appendChild(confirmBtn);
     actions.appendChild(cancelBtn);
 
@@ -1050,21 +1467,75 @@
     modal.appendChild(actions);
     inputOverlay.appendChild(modal);
 
-    const handleConfirm = () => {
+    prepareAsyncButton(confirmBtn, config.confirmText || t("btnConfirm", null, "确定"));
+    let isSubmitting = false;
+    const setModalMessage = (message, stateName) => {
+      if (!messageEl) {
+        return;
+      }
+      messageEl.textContent = message || "";
+      messageEl.dataset.state = stateName || "";
+    };
+
+    const handleConfirm = async () => {
       const value = input.value.trim();
-      if (value) {
-        callback(value);
+      if (!value || isSubmitting) {
+        return;
+      }
+      isSubmitting = true;
+      setModalMessage("", "");
+      setAsyncButtonState(confirmBtn, {
+        state: "pending",
+        label: config.pendingLabel || t("buttonStateApplying", null, "处理中..."),
+        autoResetMs: 0
+      });
+      cancelBtn.disabled = true;
+      input.disabled = true;
+      let result;
+      try {
+        result = await Promise.resolve(callback(value));
+      } catch (error) {
+        result = {
+          ok: false,
+          message: error instanceof Error ? error.message : String(error || "")
+        };
+      }
+      const failed = result === false || (result && typeof result === "object" && result.ok === false);
+      if (failed) {
+        isSubmitting = false;
+        setAsyncButtonState(confirmBtn, {
+          state: "error",
+          label: config.errorLabel || t("buttonStateApplyFailed", null, "处理失败"),
+          autoResetMs: 0
+        });
+        cancelBtn.disabled = false;
+        input.disabled = false;
+        setModalMessage(
+          (result && typeof result === "object" && result.message)
+            || config.errorMessage
+            || t("errorUpdateFailed", null, "更新失败。"),
+          "error"
+        );
+        input.focus();
+        input.select();
+        return;
       }
       inputOverlay.remove();
     };
     const handleCancel = () => {
+      if (isSubmitting) {
+        return;
+      }
       inputOverlay.remove();
     };
-    confirmBtn.addEventListener("click", handleConfirm);
+    confirmBtn.addEventListener("click", () => {
+      void handleConfirm();
+    });
     cancelBtn.addEventListener("click", handleCancel);
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
-        handleConfirm();
+        e.preventDefault();
+        void handleConfirm();
       } else if (e.key === "Escape") {
         handleCancel();
       }
@@ -1086,6 +1557,7 @@
     const config = options && typeof options === "object" ? options : {};
     const confirmText = config.confirmText || t("btnConfirm", null, "确定");
     const cancelText = config.cancelText || t("btnCancel", null, "取消");
+    const singleAction = Boolean(config.singleAction);
     const overlay = document.createElement("div");
     overlay.className = "gh-stars-helper-modal-overlay";
 
@@ -1106,13 +1578,15 @@
     confirmBtn.className = "gh-stars-helper-modal-confirm";
     confirmBtn.textContent = confirmText;
 
-    const cancelBtn = document.createElement("button");
-    cancelBtn.type = "button";
-    cancelBtn.className = "gh-stars-helper-modal-cancel";
-    cancelBtn.textContent = cancelText;
-
     actions.appendChild(confirmBtn);
-    actions.appendChild(cancelBtn);
+    let cancelBtn = null;
+    if (!singleAction) {
+      cancelBtn = document.createElement("button");
+      cancelBtn.type = "button";
+      cancelBtn.className = "gh-stars-helper-modal-cancel";
+      cancelBtn.textContent = cancelText;
+      actions.appendChild(cancelBtn);
+    }
 
     modal.appendChild(header);
     modal.appendChild(description);
@@ -1129,13 +1603,27 @@
         cleanup();
       }
     });
-    cancelBtn.addEventListener("click", cleanup);
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", cleanup);
+    }
     overlay.addEventListener("click", (event) => {
       if (event.target === overlay) {
         cleanup();
       }
     });
     document.body.appendChild(overlay);
+  }
+
+  /**
+   * 显示单按钮提示弹窗，替代移动端不稳定的原生 alert。
+   */
+  function showNoticeModal(title, message, options) {
+    const config = options && typeof options === "object" ? options : {};
+    showConfirmModal(title, message, null, {
+      ...config,
+      singleAction: true,
+      confirmText: config.confirmText || t("btnGotIt", null, "知道了")
+    });
   }
 
   content.ui = {
@@ -1149,11 +1637,17 @@
     openHelpModal,
     openGistFromConfig,
     showConflictDialog,
+    prepareAsyncButton,
+    getAsyncButtonState,
+    setAsyncButtonState,
+    resetAsyncButtonState,
+    showToast,
     setStatus,
     renderStatus,
     renderStats,
     renderAll,
     showInputModal,
-    showConfirmModal
+    showConfirmModal,
+    showNoticeModal
   };
 })();
