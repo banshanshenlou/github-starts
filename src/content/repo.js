@@ -528,7 +528,7 @@
       }
       if (ok) {
         setModalMessage(
-          t("statusRepoSaveSyncing", null, "本地已保存，正在同步到云端..."),
+          t("statusRepoSaveSyncing", null, "正在同步..."),
           "pending"
         );
         content.ui.setAsyncButtonState(saveButton, {
@@ -539,7 +539,7 @@
         const syncResult = await syncAfterSave();
         if (syncResult && syncResult.ok) {
           setModalMessage(
-            t("statusRepoSaveSynced", null, "已同步到云端。"),
+            t("statusRepoSaveSynced", null, "同步完成"),
             "success"
           );
           content.ui.setAsyncButtonState(saveButton, {
@@ -563,28 +563,28 @@
         });
         if (syncResult && syncResult.reason === "config_missing") {
           setModalMessage(
-            t("statusRepoSaveLocalOnlyConfigMissing", null, "已保存到本地，但未配置同步，尚未上传到云端。"),
+            t("statusRepoSaveLocalOnlyConfigMissing", null, "已保存，未开启同步"),
             "error"
           );
           return;
         }
         if (syncResult && syncResult.reason === "conflict") {
           setModalMessage(
-            t("statusRepoSaveLocalOnlyConflict", null, "已保存到本地，但当前存在冲突，未执行同步。"),
+            t("statusRepoSaveLocalOnlyConflict", null, "已保存，存在冲突"),
             "error"
           );
           return;
         }
         if (syncResult && syncResult.reason === "syncing") {
           setModalMessage(
-            t("statusRepoSaveLocalOnlySyncBusy", null, "已保存到本地，当前已有同步任务在执行，请稍后重试。"),
+            t("statusRepoSaveLocalOnlySyncBusy", null, "已保存，同步繁忙"),
             "error"
           );
           return;
         }
         setModalMessage(
           (syncResult && syncResult.error)
-            || t("statusRepoSaveLocalOnlySyncFailed", null, "已保存到本地，但同步到云端失败。"),
+            || t("statusRepoSaveLocalOnlySyncFailed", null, "已保存，同步失败"),
           "error"
         );
         return;
