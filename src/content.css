@@ -484,6 +484,13 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
   font-size: var(--font-size-xs);
 }
 
+.gh-stars-helper-conflict-recent-repos {
+  color: var(--color-text-primary);
+  line-height: var(--line-height-base);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
 .gh-stars-helper-conflict-meta {
   display: grid;
   gap: var(--space-1);
@@ -491,6 +498,11 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
 
 .gh-stars-helper-conflict-hint {
   color: var(--color-text-warning);
+}
+
+.gh-stars-helper-conflict-open,
+.gh-stars-helper-open-gist {
+  opacity: 0.84;
 }
 
 .gh-stars-helper-conflict-actions {

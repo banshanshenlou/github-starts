@@ -496,18 +496,18 @@
         <div class="gh-stars-helper-conflict">
           <div class="gh-stars-helper-conflict-title">${t("conflictTitle", null, "检测到同步冲突")}</div>
           <div class="gh-stars-helper-conflict-desc">
-            ${t("conflictDesc", null, "本机有未同步修改，同时云端版本也变化了。")}
+            ${t("conflictDesc", null, "这台设备有未同步修改，云端内容也已经更新。")}
           </div>
+          <div class="gh-stars-helper-conflict-recent-repos"></div>
+          <div class="gh-stars-helper-conflict-hint"></div>
           <div class="gh-stars-helper-conflict-meta">
             <div class="gh-stars-helper-conflict-local-line"></div>
             <div class="gh-stars-helper-conflict-cloud-line"></div>
-            <div class="gh-stars-helper-conflict-recent-repos"></div>
           </div>
-          <div class="gh-stars-helper-conflict-hint"></div>
           <div class="gh-stars-helper-conflict-actions">
             <button class="gh-stars-helper-conflict-remote" type="button">${t("conflictKeepRemote", null, "使用云端版本")}</button>
             <button class="gh-stars-helper-conflict-local" type="button">${t("conflictKeepLocal", null, "保留本机修改")}</button>
-            <button class="gh-stars-helper-conflict-open" type="button">${t("conflictOpenGist", null, "打开 Gist")}</button>
+            <button class="gh-stars-helper-conflict-open" type="button">${t("conflictOpenGist", null, "高级：打开 Gist")}</button>
           </div>
         </div>
       </div>
@@ -1117,35 +1117,39 @@
     const localUpdatedAt = formatConflictTime(state.meta && state.meta.updated_at);
     const remoteUpdatedAt = formatConflictTime(remoteMeta.updated_at);
     return {
-      desc: t("conflictDesc", null, "本机有未同步修改，同时云端版本也变化了。"),
-      localLine: t(
-        "conflictSummaryLocal",
-        [localRevision, pendingCount, localUpdatedAt],
-        `本机：修订 ${localRevision}，待同步 ${pendingCount} 项，最近修改 ${localUpdatedAt}`
-      ),
-      cloudLine: t(
-        "conflictSummaryCloud",
-        [remoteRevision, remoteUpdatedAt],
-        `云端：修订 ${remoteRevision}，最近修改 ${remoteUpdatedAt}`
-      ),
+      desc: t("conflictDesc", null, "这台设备有未同步修改，云端内容也已经更新。"),
       recentReposLine: recentPendingRepos.length > 0
         ? t(
           "conflictRecentPendingRepos",
           [recentPendingRepos.join("、")],
-          `本机最近修改仓库：${recentPendingRepos.join("、")}`
+          `这台设备最近未同步仓库：${recentPendingRepos.join("、")}`
         )
-        : "",
-      hint: Number(pendingCount) > 0
+        : t(
+          "conflictRecentPendingReposUnknown",
+          null,
+          "这台设备有未同步修改，但暂时还定位不到具体仓库。"
+        ),
+      hint: recentPendingRepos.length > 0
         ? t(
           "conflictHintPending",
           null,
-          "如果刚刚在这台设备上改过分组、标签或备注且还没同步，选“保留本机修改”；如果想以 Gist 最新内容为准，选“使用云端版本”。"
+          "想保留这台设备对这些仓库的修改，选“保留本机修改”；想直接采用云端最新内容，选“使用云端版本”。"
         )
         : t(
           "conflictHintNoPending",
           null,
-          "这台设备当前没有明显的待同步修改；如果不确定，通常优先选“使用云端版本”。"
-        )
+          "如果不确定改动来自哪边，通常先选“使用云端版本”更稳妥。"
+        ),
+      localLine: t(
+        "conflictSummaryLocal",
+        [localRevision, pendingCount, localUpdatedAt],
+        `参考：本机修订 ${localRevision}，待同步 ${pendingCount} 项，最近修改 ${localUpdatedAt}`
+      ),
+      cloudLine: t(
+        "conflictSummaryCloud",
+        [remoteRevision, remoteUpdatedAt],
+        `参考：云端修订 ${remoteRevision}，最近修改 ${remoteUpdatedAt}`
+      )
     };
   }
 
@@ -1203,17 +1207,17 @@
     const desc = document.createElement("p");
     desc.textContent = summary.desc;
 
-    const localLine = document.createElement("p");
-    localLine.textContent = summary.localLine;
-
-    const cloudLine = document.createElement("p");
-    cloudLine.textContent = summary.cloudLine;
-
     const recentReposLine = document.createElement("p");
     recentReposLine.textContent = summary.recentReposLine;
 
     const hint = document.createElement("p");
     hint.textContent = summary.hint;
+
+    const localLine = document.createElement("p");
+    localLine.textContent = summary.localLine;
+
+    const cloudLine = document.createElement("p");
+    cloudLine.textContent = summary.cloudLine;
 
     const actions = document.createElement("div");
     actions.className = "gh-stars-helper-modal-actions";
@@ -1231,7 +1235,7 @@
     const openGistButton = document.createElement("button");
     openGistButton.className = "gh-stars-helper-open-gist";
     openGistButton.type = "button";
-    openGistButton.textContent = t("conflictOpenGist", null, "打开 Gist");
+    openGistButton.textContent = t("conflictOpenGist", null, "高级：打开 Gist");
 
     const cancelButton = document.createElement("button");
     cancelButton.className = "gh-stars-helper-cancel";
@@ -1245,12 +1249,10 @@
 
     modal.appendChild(title);
     modal.appendChild(desc);
+    modal.appendChild(recentReposLine);
+    modal.appendChild(hint);
     modal.appendChild(localLine);
     modal.appendChild(cloudLine);
-    if (summary.recentReposLine) {
-      modal.appendChild(recentReposLine);
-    }
-    modal.appendChild(hint);
     modal.appendChild(actions);
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
