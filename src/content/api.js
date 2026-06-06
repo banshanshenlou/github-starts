@@ -158,6 +158,35 @@
   }
 
   /**
+   * 首次进入页面时强制执行一次完整同步，确保本机不会先基于旧状态继续操作。
+   */
+  async function ensureInitialFullSync() {
+    if (runtime.initialFullSyncDone) {
+      return true;
+    }
+    if (runtime.initialFullSyncPromise) {
+      return runtime.initialFullSyncPromise;
+    }
+    runtime.initialFullSyncPromise = (async () => {
+      const loaded = await ensureStateLoaded();
+      if (!loaded) {
+        return false;
+      }
+      runtime.initialFullSyncDone = true;
+      if (!content.state.config || !content.state.config.hasPat || !content.state.config.gistId) {
+        return true;
+      }
+      const result = await syncNow("auto", { showToast: false });
+      return Boolean(result && result.ok);
+    })();
+    try {
+      return await runtime.initialFullSyncPromise;
+    } finally {
+      runtime.initialFullSyncPromise = null;
+    }
+  }
+
+  /**
    * 仅拉取远端 meta / revision，用于页面进入或打开编辑器前预热状态。
    */
   async function syncMeta(options) {
@@ -311,6 +340,7 @@
     refreshState,
     ensureStateLoaded,
     syncNow,
+    ensureInitialFullSync,
     syncMeta,
     updateRepoMeta,
     updateGroups,

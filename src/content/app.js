@@ -34,6 +34,12 @@
    * 根据上次同步时间决定是否需要自动同步。
    */
   async function autoSyncIfNeeded() {
+    if (!runtime.initialFullSyncDone) {
+      const synced = await content.api.ensureInitialFullSync();
+      if (!synced) {
+        return;
+      }
+    }
     if (!state.syncStatus || !state.syncStatus.updated_at) {
       await content.api.syncNow("auto");
       return;
@@ -70,7 +76,7 @@
       content.page.startObserver();
       content.api.refreshState();
       startPolling();
-      autoSyncIfNeeded();
+      void autoSyncIfNeeded();
     } else {
       content.page.stopObserver();
       stopPolling();

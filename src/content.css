@@ -98,9 +98,33 @@
   user-select: none;
   touch-action: none;
   overflow: hidden;
+  isolation: isolate;
   z-index: var(--z-floating);
   transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
   box-shadow: var(--shadow-sm);
+}
+
+.gh-stars-helper-manage-btn::before {
+  content: "";
+  position: absolute;
+  inset: -100%;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 0;
+  transition: opacity var(--transition-fast);
+  transform-origin: center;
+}
+
+.gh-stars-helper-manage-btn::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: calc(10px - 2px);
+  background: var(--color-bg-secondary);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 1;
+  transition: opacity var(--transition-fast);
 }
 
 .gh-stars-helper-manage-logo {
@@ -113,6 +137,7 @@
   object-position: center;
   transform: none;
   pointer-events: none;
+  z-index: 2;
 }
 
 .gh-stars-helper-manage-logo-light {
@@ -131,30 +156,20 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
   opacity: 1;
 }
 
-.gh-stars-helper-manage-btn.attention {
-  animation: gh-stars-helper-manage-attention 0.7s ease-in-out 2;
+.gh-stars-helper-manage-btn.attention-ring::before {
+  opacity: 1;
+  background: conic-gradient(
+    from 0deg,
+    rgba(251, 146, 60, 0.98) 0deg,
+    rgba(251, 191, 36, 0.95) 42deg,
+    rgba(251, 146, 60, 0.25) 58deg,
+    transparent 76deg
+  );
+  animation: gh-stars-helper-manage-attention-ring 0.95s linear 1;
 }
 
-.gh-stars-helper-manage-btn.attention:hover {
-  animation-play-state: paused;
-}
-
-@keyframes gh-stars-helper-manage-attention {
-  0% {
-    opacity: 1;
-    box-shadow: var(--shadow-sm);
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.35;
-    box-shadow: 0 0 0 6px rgba(9, 105, 218, 0.18), var(--shadow-md);
-    transform: scale(1.04);
-  }
-  100% {
-    opacity: 1;
-    box-shadow: var(--shadow-sm);
-    transform: scale(1);
-  }
+.gh-stars-helper-manage-btn.attention-ring::after {
+  opacity: 1;
 }
 
 .gh-stars-helper-manage-btn:hover {
@@ -182,6 +197,75 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
   cursor: grabbing;
   box-shadow: var(--shadow-lg);
   transition: none;
+}
+
+.gh-stars-helper-manage-btn.sync-indicator-syncing::before {
+  opacity: 1;
+  background: conic-gradient(
+    from 0deg,
+    rgba(9, 105, 218, 0.98) 0deg,
+    rgba(9, 105, 218, 0.98) 38deg,
+    rgba(9, 105, 218, 0.2) 48deg,
+    transparent 64deg
+  );
+  animation: gh-stars-helper-manage-sync-ring 4s linear infinite;
+}
+
+.gh-stars-helper-manage-btn.sync-indicator-syncing::after {
+  opacity: 1;
+}
+
+.gh-stars-helper-manage-btn.sync-indicator-success::before {
+  opacity: 1;
+  background: conic-gradient(
+    from 0deg,
+    rgba(26, 127, 55, 0.95) 0deg,
+    rgba(45, 164, 78, 0.95) 150deg,
+    rgba(26, 127, 55, 0.45) 260deg,
+    rgba(26, 127, 55, 0.95) 360deg
+  );
+}
+
+.gh-stars-helper-manage-btn.sync-indicator-success::after {
+  opacity: 1;
+}
+
+.gh-stars-helper-manage-btn.sync-indicator-error::before {
+  opacity: 1;
+  background: conic-gradient(
+    from 0deg,
+    rgba(207, 34, 46, 0.95) 0deg,
+    rgba(207, 34, 46, 0.95) 150deg,
+    rgba(207, 34, 46, 0.45) 260deg,
+    rgba(207, 34, 46, 0.95) 360deg
+  );
+}
+
+.gh-stars-helper-manage-btn.sync-indicator-error::after {
+  opacity: 1;
+}
+
+.gh-stars-helper-async-button.is-pending {
+  cursor: progress;
+  opacity: 0.82;
+}
+
+@keyframes gh-stars-helper-manage-sync-ring {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes gh-stars-helper-manage-attention-ring {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 遮罩层 */

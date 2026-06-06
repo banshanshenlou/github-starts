@@ -9,13 +9,16 @@
     "dev:firefox": "wxt -b firefox --mv3",
     "build": "wxt build",
     "build:firefox": "wxt build -b firefox --mv3",
-    "zip": "wxt zip",
-    "zip:firefox": "wxt zip -b firefox --mv3",
-    "verify:build": "node scripts/verify-cross-browser-build.mjs",
+    "zip": "wxt zip && npm run verify:extension-key",
+    "zip:firefox": "wxt zip -b firefox --mv3 && npm run verify:extension-key",
+    "verify:build": "node scripts/verify-cross-browser-build.mjs && npm run verify:extension-key",
     "compile": "tsc --noEmit",
-    "postinstall": "wxt prepare"
+    "postinstall": "wxt prepare",
+    "test:extension": "npm run build && npm run verify:extension-key && node scripts/run-extension-check.mjs",
+    "verify:extension-key": "node scripts/verify-extension-key.mjs"
   },
   "devDependencies": {
+    "playwright": "^1.60.0",
     "typescript": "^5.9.3",
     "wxt": "^0.20.17"
   }

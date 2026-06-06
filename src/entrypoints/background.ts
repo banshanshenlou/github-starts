@@ -10,7 +10,19 @@ import "../background/sync.js";
 import "../background/handlers.js";
 
 export default defineBackground(() => {
-  const register = globalThis.GhStarsHelperBackground?.handlers?.registerBackgroundHandlers;
+  const typedGlobal = globalThis as typeof globalThis & {
+    GhStarsHelperBackground?: {
+      handlers?: {
+        registerBackgroundHandlers?: () => void;
+      };
+    };
+  };
+  const backgroundRoot = typedGlobal.GhStarsHelperBackground as {
+    handlers?: {
+      registerBackgroundHandlers?: () => void;
+    };
+  } | undefined;
+  const register = backgroundRoot?.handlers?.registerBackgroundHandlers;
   if (typeof register !== "function") {
     console.error("[github-stars-manager] 后台初始化失败：未找到注册函数");
     return;

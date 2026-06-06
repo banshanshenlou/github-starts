@@ -75,6 +75,8 @@
     repoStarAutoOpenAttached: false,
     starCacheListenerAttached: false,
     repoAutoOpenInProgress: false,
+    initialFullSyncDone: false,
+    initialFullSyncPromise: null,
     lastRepoAutoOpenIntentKey: "",
     lastRepoAutoOpenIntentTime: 0,
     lastStarToggleIntentKey: "",
@@ -86,6 +88,9 @@
     escHandlerAttached: false,
     repoAutoSyncTimer: null,
     toastTimer: null,
-    groupTreeScrollTop: 0
+    groupTreeScrollTop: 0,
+    manageButtonSyncIndicatorState: "",
+    manageButtonSyncIndicatorTimer: null,
+    manageButtonLastSyncState: ""
   };
 })();

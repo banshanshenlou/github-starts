@@ -10,6 +10,7 @@
   const DRAWER_OPEN_META_SYNC_INTERVAL_MS = 15000;
   const SETTINGS_LOG_EXPORT_PREFIX = "github-stars-debug";
   const ASYNC_BUTTON_SUCCESS_RESET_MS = 1500;
+  const MANAGE_BUTTON_SYNC_FEEDBACK_MS = 1500;
   const TOAST_AUTO_CLOSE_MS = 2200;
   const buttonResetTimers = new WeakMap();
   const t = typeof shared.t === "function"
@@ -175,19 +176,30 @@
         bodyReady: Boolean(document.body)
       });
     }
-    // 首次注入时闪烁两下，提示悬浮按钮入口。
+    // 首次注入时用一次性边框跑马灯提示入口，避免按钮本体闪烁干扰阅读。
     window.requestAnimationFrame(() => {
-      button.classList.add("attention");
+      if (button.classList.contains("sync-indicator-syncing")) {
+        return;
+      }
+      button.classList.add("attention-ring");
+      const clearAttentionRing = () => {
+        button.classList.remove("attention-ring");
+      };
+      const attentionFallbackTimer = window.setTimeout(clearAttentionRing, 1200);
       button.addEventListener(
         "animationend",
-        () => {
-          button.classList.remove("attention");
+        (event) => {
+          if (event.animationName === "gh-stars-helper-manage-attention-ring") {
+            window.clearTimeout(attentionFallbackTimer);
+            clearAttentionRing();
+          }
         },
         { once: true }
       );
     });
     content.storage.setupManageButtonDrag(button);
     elements.manageButton = button;
+    applyManageButtonSyncIndicator();
     window.requestAnimationFrame(() => {
       content.storage.applyManageButtonPosition(button);
     });
@@ -364,6 +376,95 @@
       }, 180);
       runtime.toastTimer = null;
     }, Number.isFinite(config.durationMs) ? config.durationMs : TOAST_AUTO_CLOSE_MS);
+  }
+
+  /**
+   * 清理悬浮按钮同步提示的自动恢复定时器，避免旧态覆盖新态。
+   */
+  function clearManageButtonSyncIndicatorTimer() {
+    if (!runtime.manageButtonSyncIndicatorTimer) {
+      return;
+    }
+    window.clearTimeout(runtime.manageButtonSyncIndicatorTimer);
+    runtime.manageButtonSyncIndicatorTimer = null;
+  }
+
+  /**
+   * 将悬浮按钮同步提示状态映射到样式类，抽屉收起后即可看到边框动画。
+   */
+  function applyManageButtonSyncIndicator() {
+    if (!elements.manageButton) {
+      return;
+    }
+    const indicatorState = runtime.manageButtonSyncIndicatorState || "";
+    if (indicatorState === "syncing") {
+      elements.manageButton.classList.remove("attention-ring");
+    }
+    elements.manageButton.classList.toggle("sync-indicator-syncing", indicatorState === "syncing");
+    elements.manageButton.classList.toggle("sync-indicator-success", indicatorState === "success");
+    elements.manageButton.classList.toggle("sync-indicator-error", indicatorState === "error");
+  }
+
+  /**
+   * 设置悬浮按钮同步提示：同步中持续显示，成功/失败短暂保留结果色。
+   */
+  function setManageButtonSyncIndicator(stateName, options) {
+    const config = options && typeof options === "object" ? options : {};
+    runtime.manageButtonSyncIndicatorState = stateName || "";
+    clearManageButtonSyncIndicatorTimer();
+    applyManageButtonSyncIndicator();
+    const autoResetMs = Number.isFinite(config.autoResetMs) ? config.autoResetMs : 0;
+    if (autoResetMs > 0 && runtime.manageButtonSyncIndicatorState) {
+      runtime.manageButtonSyncIndicatorTimer = window.setTimeout(() => {
+        runtime.manageButtonSyncIndicatorTimer = null;
+        runtime.manageButtonSyncIndicatorState = "";
+        applyManageButtonSyncIndicator();
+      }, autoResetMs);
+    }
+  }
+
+  /**
+   * 根据同步状态驱动悬浮按钮边框：同步中跑马灯，结束后短暂显示成功/失败色。
+   */
+  function renderManageButtonSyncIndicator() {
+    const currentState = state.syncStatus?.state || "idle";
+    const previousState = runtime.manageButtonLastSyncState || "";
+    runtime.manageButtonLastSyncState = currentState;
+
+    if (currentState === "syncing") {
+      setManageButtonSyncIndicator("syncing");
+      return;
+    }
+    if (currentState === "error") {
+      if (previousState !== "error") {
+        setManageButtonSyncIndicator("error", {
+          autoResetMs: MANAGE_BUTTON_SYNC_FEEDBACK_MS
+        });
+      }
+      return;
+    }
+    if (previousState === "syncing" && currentState === "idle") {
+      setManageButtonSyncIndicator("success", {
+        autoResetMs: MANAGE_BUTTON_SYNC_FEEDBACK_MS
+      });
+      return;
+    }
+    if (runtime.manageButtonSyncIndicatorState === "syncing") {
+      setManageButtonSyncIndicator("");
+      return;
+    }
+    applyManageButtonSyncIndicator();
+  }
+
+  /**
+   * 强制重新计算悬浮按钮同步动画，用于状态变化后的显式刷新。
+   */
+  function refreshManageButtonSyncIndicator() {
+    if (!elements.manageButton) {
+      return;
+    }
+    applyManageButtonSyncIndicator();
+    renderManageButtonSyncIndicator();
   }
 
   /**
@@ -701,6 +802,7 @@
     if (elements.manageButton) {
       elements.manageButton.classList.toggle("hidden", shouldOpen);
     }
+    applyManageButtonSyncIndicator();
     if (content.debug) {
       content.debug.log("drawer.toggle", {
         shouldOpen,
@@ -1326,6 +1428,7 @@
     if (!elements.statusText || !elements.pendingText) {
       return;
     }
+    refreshManageButtonSyncIndicator();
     const status = state.syncStatus || { state: "idle", message: "" };
     let text = "";
     if (status.state === "syncing") {
@@ -1643,6 +1746,8 @@
     getAsyncButtonState,
     setAsyncButtonState,
     resetAsyncButtonState,
+    setManageButtonSyncIndicator,
+    refreshManageButtonSyncIndicator,
     showToast,
     setStatus,
     renderStatus,

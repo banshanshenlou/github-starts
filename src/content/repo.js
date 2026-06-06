@@ -85,6 +85,37 @@
   }
 
   /**
+   * 让星标按钮进入等待态，避免点击后长时间没有视觉反馈。
+   */
+  function setStarButtonPending(repoFullName, pending) {
+    if (!repoFullName) {
+      return;
+    }
+    const control = findRepoStarControl(repoFullName);
+    const button = control.button;
+    if (!button) {
+      return;
+    }
+    if (!button.dataset.ghStarsHelperIdleLabel) {
+      button.dataset.ghStarsHelperIdleLabel = button.getAttribute("aria-label") || button.textContent || "";
+    }
+    if (pending) {
+      button.classList.add("is-pending");
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+      button.setAttribute("aria-label", t("buttonStateLoading", null, "加载中..."));
+      return;
+    }
+    button.classList.remove("is-pending");
+    button.disabled = false;
+    button.setAttribute("aria-busy", "false");
+    const idleLabel = button.dataset.ghStarsHelperIdleLabel || "";
+    if (idleLabel) {
+      button.setAttribute("aria-label", idleLabel);
+    }
+  }
+
+  /**
    * 读取仍在有效期内的 Star 意图；过期后立即清理，避免污染后续判断。
    */
   function getPendingStarState(repoFullName) {
@@ -888,6 +919,42 @@
   }
 
   /**
+   * 为星标操作展示等待态，避免点击后长时间无反馈。
+   */
+  function setStarActionPending(repoFullName, pending) {
+    if (!repoFullName) {
+      return;
+    }
+    const control = findRepoStarControl(repoFullName);
+    const button = control.button;
+    if (!button) {
+      return;
+    }
+    const label = pending
+      ? t("buttonStateLoading", null, "加载中...")
+      : (button.dataset.ghStarsHelperIdleLabel || button.textContent || "");
+    if (!button.dataset.ghStarsHelperIdleLabel) {
+      button.dataset.ghStarsHelperIdleLabel = button.textContent || "";
+    }
+    if (pending) {
+      button.classList.add("is-pending");
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+      button.setAttribute("aria-label", label);
+      button.title = label;
+      return;
+    }
+    button.classList.remove("is-pending");
+    button.disabled = false;
+    button.setAttribute("aria-busy", "false");
+    const idleLabel = button.dataset.ghStarsHelperIdleLabel || "";
+    if (idleLabel) {
+      button.setAttribute("aria-label", idleLabel);
+      button.title = idleLabel;
+    }
+  }
+
+  /**
    * 读取仓库的 Star 状态。
    */
   function getRepoStarState(repoFullName) {
@@ -1223,6 +1290,7 @@
     }
     savePendingRepoAutoEditor(repoFullName);
     setPendingStarState(repoFullName, true);
+    setStarButtonPending(repoFullName, true);
     runtime.repoAutoOpenInProgress = true;
     if (content.debug) {
       content.debug.log("repo.auto_editor.trigger.start", {
@@ -1239,16 +1307,19 @@
             reason: "star_wait_timeout"
           });
         }
+        setStarButtonPending(repoFullName, false);
         return;
       }
       clearPendingRepoAutoEditor();
       await applyStarCacheUpdate(repoFullName, true);
       const canOpen = await syncMetaBeforeEditor();
       if (!canOpen) {
+        setStarButtonPending(repoFullName, false);
         return;
       }
       await openRepoEditor(repoFullName);
     } finally {
+      setStarButtonPending(repoFullName, false);
       runtime.repoAutoOpenInProgress = false;
     }
   }
@@ -1290,6 +1361,7 @@
     }
     const expected = current === true ? false : true;
     setPendingStarState(repoFullName, expected);
+    setStarButtonPending(repoFullName, true);
     if (isDuplicateStarIntent(repoFullName, "lastStarToggleIntentKey", "lastStarToggleIntentTime")) {
       return;
     }
@@ -1302,9 +1374,11 @@
           reason: "wait_timeout"
         });
       }
+      setStarButtonPending(repoFullName, false);
       return;
     }
     await applyStarCacheUpdate(repoFullName, expected);
+    setStarButtonPending(repoFullName, false);
     if (isRepoPage()) {
       // GitHub 切换 Star 状态时会重建操作区域，重新补回内联编辑按钮。
       window.requestAnimationFrame(() => {
