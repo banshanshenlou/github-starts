@@ -185,7 +185,7 @@
       const clearAttentionRing = () => {
         button.classList.remove("attention-ring");
       };
-      const attentionFallbackTimer = window.setTimeout(clearAttentionRing, 1200);
+      const attentionFallbackTimer = window.setTimeout(clearAttentionRing, 2300);
       button.addEventListener(
         "animationend",
         (event) => {

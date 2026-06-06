@@ -165,7 +165,7 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
     rgba(251, 146, 60, 0.25) 58deg,
     transparent 76deg
   );
-  animation: gh-stars-helper-manage-attention-ring 0.95s linear 1;
+  animation: gh-stars-helper-manage-attention-ring 1.9s linear 1;
 }
 
 .gh-stars-helper-manage-btn.attention-ring::after {

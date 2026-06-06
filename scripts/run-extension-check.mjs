@@ -116,7 +116,7 @@ try {
     `Unexpected initial attention animation: ${JSON.stringify(state)}`
   );
   assert(
-    state.attentionState.beforeAnimationDuration === "0.95s",
+    state.attentionState.beforeAnimationDuration === "1.9s",
     `Unexpected initial attention speed: ${JSON.stringify(state)}`
   );
   assert(
