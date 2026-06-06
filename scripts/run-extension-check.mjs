@@ -121,7 +121,8 @@ try {
   );
   assert(
     state.attentionState.beforeBackgroundImage.includes("conic-gradient")
-      && state.attentionState.beforeBackgroundImage.includes("rgba(251, 146, 60, 0.98)"),
+      && state.attentionState.beforeBackgroundImage.includes("rgba(251, 191, 36, 0.98)")
+      && state.attentionState.beforeBackgroundImage.includes("rgba(255, 255, 255, 0.92)"),
     `Unexpected initial attention gradient: ${JSON.stringify(state)}`
   );
   assert(state.className.includes("sync-indicator-syncing"), `Sync indicator class missing: ${JSON.stringify(state)}`);
@@ -137,7 +138,8 @@ try {
   assert(
     state.beforeInset.includes("-")
       && state.beforeBackgroundImage.includes("conic-gradient")
-      && state.beforeBackgroundImage.includes("rgba(9, 105, 218, 0.98)"),
+      && state.beforeBackgroundImage.includes("rgba(9, 105, 218, 0.98)")
+      && state.beforeBackgroundImage.includes("rgba(255, 255, 255, 0.92)"),
     `Unexpected sync ring gradient: ${JSON.stringify(state)}`
   );
   assert(state.afterOpacity === "1", `Inner mask is not visible: ${JSON.stringify(state)}`);

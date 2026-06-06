@@ -160,10 +160,14 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
   opacity: 1;
   background: conic-gradient(
     from 0deg,
-    rgba(251, 146, 60, 0.98) 0deg,
-    rgba(251, 191, 36, 0.95) 42deg,
-    rgba(251, 146, 60, 0.25) 58deg,
-    transparent 76deg
+    transparent 0deg,
+    rgba(251, 146, 60, 0.16) 10deg,
+    rgba(251, 146, 60, 0.72) 26deg,
+    rgba(251, 191, 36, 0.98) 38deg,
+    rgba(255, 255, 255, 0.92) 46deg,
+    rgba(251, 191, 36, 0.82) 54deg,
+    rgba(251, 146, 60, 0.22) 70deg,
+    transparent 88deg
   );
   animation: gh-stars-helper-manage-attention-ring 1.9s linear 1;
 }
@@ -203,10 +207,14 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
   opacity: 1;
   background: conic-gradient(
     from 0deg,
-    rgba(9, 105, 218, 0.98) 0deg,
+    transparent 0deg,
+    rgba(9, 105, 218, 0.16) 10deg,
+    rgba(9, 105, 218, 0.72) 26deg,
     rgba(9, 105, 218, 0.98) 38deg,
-    rgba(9, 105, 218, 0.2) 48deg,
-    transparent 64deg
+    rgba(255, 255, 255, 0.92) 46deg,
+    rgba(9, 105, 218, 0.82) 54deg,
+    rgba(9, 105, 218, 0.22) 70deg,
+    transparent 88deg
   );
   animation: gh-stars-helper-manage-sync-ring 4s linear infinite;
 }
@@ -255,7 +263,7 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
     transform: rotate(0deg);
   }
   to {
-    transform: rotate(360deg);
+    transform: rotate(-360deg);
   }
 }
 
@@ -264,7 +272,7 @@ html[data-color-mode="dark"] .gh-stars-helper-manage-logo-dark {
     transform: rotate(0deg);
   }
   to {
-    transform: rotate(360deg);
+    transform: rotate(-360deg);
   }
 }
 
