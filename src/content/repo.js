@@ -85,7 +85,8 @@
   }
 
   /**
-   * 让星标按钮进入等待态，避免点击后长时间没有视觉反馈。
+   * 让星标按钮进入等待态，但不禁用 GitHub 原生按钮。
+   * Star 表单的 click/submit 仍要交给 GitHub 自己完成。
    */
   function setStarButtonPending(repoFullName, pending) {
     if (!repoFullName) {
@@ -101,13 +102,11 @@
     }
     if (pending) {
       button.classList.add("is-pending");
-      button.disabled = true;
       button.setAttribute("aria-busy", "true");
       button.setAttribute("aria-label", t("buttonStateLoading", null, "加载中..."));
       return;
     }
     button.classList.remove("is-pending");
-    button.disabled = false;
     button.setAttribute("aria-busy", "false");
     const idleLabel = button.dataset.ghStarsHelperIdleLabel || "";
     if (idleLabel) {
@@ -919,7 +918,7 @@
   }
 
   /**
-   * 为星标操作展示等待态，避免点击后长时间无反馈。
+   * 为星标操作展示等待态，但不接管 GitHub 原生按钮的禁用状态。
    */
   function setStarActionPending(repoFullName, pending) {
     if (!repoFullName) {
@@ -938,14 +937,12 @@
     }
     if (pending) {
       button.classList.add("is-pending");
-      button.disabled = true;
       button.setAttribute("aria-busy", "true");
       button.setAttribute("aria-label", label);
       button.title = label;
       return;
     }
     button.classList.remove("is-pending");
-    button.disabled = false;
     button.setAttribute("aria-busy", "false");
     const idleLabel = button.dataset.ghStarsHelperIdleLabel || "";
     if (idleLabel) {
